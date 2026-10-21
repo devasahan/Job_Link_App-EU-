@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import "../extension/scrapers/title-match.js";
 import "../extension/scrapers/developer.js";
 
@@ -36,6 +37,33 @@ const DEVELOPER = [
   "Forward Deployed Engineer (EMEA)",
   "Growth Engineer",
   "Build Tools Engineer",
+  // Word forms and families no fixture title has
+  "Junior PHP vývojáři",
+  "Programatoare Java",
+  "Programmatrice Java",
+  "Ohjelmoija",
+  "Mjukvaruingenjör",
+  "Programvaruingenjör",
+  "Szoftvermérnök",
+  "Dateningenieur (m/w/d)",
+  "Ingeniero de datos",
+  "Testautomatisierungsingenieur (m/w/d)",
+  "Testiautomaatioinsinööri",
+  "Inżynier automatyzacji testów",
+  "Informatiker EFZ Applikationsentwicklung",
+  "Ingénieur systèmes embarqués",
+  "Arquitecto de software",
+  "SDE II",
+  "Release Engineer",
+  "NLP Engineer",
+  "Application Security Engineer",
+  "Cloud Infrastructure Engineer",
+  "Automotive Software Engineer",
+  "Java fejlesztő",
+  "Pelien kehittäjä",
+  "Concepteur logiciel",
+  "Μηχανικός ανάπτυξης λογισμικού",
+  "Werkstudent Python (m/w/d)",
 ];
 
 const NOT_DEVELOPER = [
@@ -65,6 +93,28 @@ const NOT_DEVELOPER = [
   "MT & AI Localization Engineer (MT-Spezialist) (m/w/d)",
   "Tooling Engineer (Injection Moulding)",
   "",
+  // Word forms and families no fixture title has
+  "CNC-Programmierer",
+  "SPS-Programmierer (m/w/d)",
+  "Programator producție",
+  "Affärsutvecklare",
+  "Eiendomsutvikler",
+  "Liiketoiminnan kehittäjä",
+  "Szervezetfejlesztő",
+  "Bekleidungsentwickler",
+  "Course Developer",
+  "Wind Project Developer",
+  "Desarrollador de negocio",
+  "Säljingenjör",
+  "Netzwerkingenieur",
+  "Cloud Support Engineer",
+  "Embedded Hardware Engineer",
+  "Software Product Manager",
+  "Kehittäjä",
+  "Fejlesztő",
+  "Data Analyst Intern (Python)",
+  "Music Programmer",
+  "Sviluppatore di prodotti tessili",
 ];
 
 test("developer roles in EU languages", () => {
@@ -73,4 +123,28 @@ test("developer roles in EU languages", () => {
 
 test("other jobs that share developer words", () => {
   assert.deepEqual(NOT_DEVELOPER.filter((t) => isDeveloper(t)), []);
+});
+
+// Real titles labelled by hand (see "about" in the fixture)
+const FIXTURE = JSON.parse(readFileSync(new URL("./fixtures/dev-titles.json", import.meta.url), "utf8"));
+
+// Titles a title-only rule cannot decide, with why
+const KNOWN_MISSES = {
+  "Senior R&D Engineer – QShield":
+    "the posting's full title adds 'Software Protection & Compilation'; an R&D Engineer on a product name names no software work",
+};
+
+test("labelled real titles get their label, except the known misses", () => {
+  const wrong = [
+    ...FIXTURE.developer.filter((t) => !isDeveloper(t)),
+    ...FIXTURE.notDeveloper.filter((t) => isDeveloper(t)),
+  ];
+  assert.deepEqual(wrong.filter((t) => !(t in KNOWN_MISSES)), []);
+  // A known miss that now gets its label leaves the list
+  assert.deepEqual(Object.keys(KNOWN_MISSES).filter((t) => !wrong.includes(t)), []);
+  // …which stays under 2% of each label
+  for (const label of ["developer", "notDeveloper"]) {
+    const misses = FIXTURE[label].filter((t) => t in KNOWN_MISSES).length;
+    assert.ok(misses < FIXTURE[label].length * 0.02, `${misses} known misses among ${label} titles`);
+  }
 });
