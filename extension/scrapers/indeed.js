@@ -20,7 +20,7 @@ import {
   formatLocation,
   stripHtml,
   resolveDatePreset,
-  filterByRequest,
+  explainRequest,
   yearsFromExperienceLabels,
   requiredYearsFromText,
   withinHours,
@@ -129,6 +129,14 @@ const LOCAL_TERMS = {
   CA: ["software engineer"],
   US: ["software engineer"],
 };
+// Countries whose own word for developer is English: a typed title is already in it
+const ENGLISH_SITES = new Set(["GB", "IE", "CA", "US"]);
+// The English role word in a typed title, swapped for the country's own word
+// ("Backend Developer" is also searched as "Backend Entwickler" in Germany,
+// "Software Engineer" as "Software Entwickler"). Other engineer titles stay
+// English: "Data Engineer" is "Data Engineer" in Germany too
+const ROLE_WORD_RE =
+  /(?<![\p{L}\p{N}])(?:developer|programmer|dev)(?![\p{L}\p{N}])|(?<=(?<![\p{L}\p{N}])software[\s-]+)engineer(?![\p{L}\p{N}])/iu;
 // Employers abroad: most of their remote jobs are local, so each search also
 // names where the job may be held; Indeed's search reads the posting text
 const ABROAD_WORDS = ["Europe", "EMEA", "worldwide"];
@@ -208,9 +216,10 @@ export function requestHeaders(country) {
 
 /**
  * What to search on one country's Indeed: each comma-separated title (plus
- * the stack, so Indeed checks it on the whole posting), or with no title
- * "developer" in English and the local language. For employers abroad each
- * search also names Europe, EMEA or worldwide.
+ * the stack, so Indeed checks it on the whole posting) as typed and with the
+ * country's own word for developer, or with no title "developer" in English
+ * and the local language. For employers abroad each search also names Europe,
+ * EMEA or worldwide.
  */
 export function searchTerms(title, stack, country, { abroad = false } = {}) {
   // Titles with no usable words ("-", "(m/w/d)") are dropped, as the title check
@@ -219,7 +228,13 @@ export function searchTerms(title, stack, country, { abroad = false } = {}) {
     .split(/[,;]/)
     .filter((t) => globalThis.jbTitleQueryTokens(t).length)
     .map((t) => globalThis.jbStripGender(t));
-  const roles = titles.length ? titles : [...DEFAULT_TERMS, ...(LOCAL_TERMS[country] || [])];
+  const local = ENGLISH_SITES.has(country) ? [] : LOCAL_TERMS[country] || [];
+  const translated = titles.flatMap((t) =>
+    ROLE_WORD_RE.test(t) ? local.map((word) => t.replace(ROLE_WORD_RE, () => word)) : []
+  );
+  const roles = titles.length
+    ? [...new Map([...titles, ...translated].map((t) => [t.toLowerCase(), t])).values()]
+    : [...DEFAULT_TERMS, ...(LOCAL_TERMS[country] || [])];
   const extra = String(stack || "").trim();
   const terms = roles.map((role) => [role, extra].filter(Boolean).join(" "));
   return abroad ? terms.flatMap((term) => ABROAD_WORDS.map((where) => `${term} ${where}`)) : terms;
@@ -334,6 +349,9 @@ export async function scrapeIndeed({
   let scanned = 0;
   let elsewhere = 0;
   let notOpen = 0;
+  let notRemote = 0;
+  // What each check left out, for the run summary
+  const dropped = { old: 0, title: 0, stack: 0, type: 0, years: 0 };
   let styleIndex = 0;
   let requests = 0;
   // A country's results are newest first; most windows fit in a page or two
@@ -382,6 +400,7 @@ export async function scrapeIndeed({
   countries: for (const country of targets) {
     const name = countryName(country);
     const countryMatched = [];
+    const scannedBefore = scanned;
     const isAbroad = abroadSites.has(country);
     // Every search runs: each title (and each language's word) has its own newest jobs
     for (const term of searchTerms(titleFilter, stack, country, { abroad: isAbroad })) {
@@ -414,7 +433,10 @@ export async function scrapeIndeed({
           seen.add(raw.key);
           scanned += 1;
           const job = toJob(raw, country);
-          if (!job) continue;
+          if (!job) {
+            notRemote += 1;
+            continue;
+          }
           if (isAbroad) {
             // Employers abroad count only when the posting says it hires in Europe
             const open = globalThis.jbOpenToEurope(job, openToNames);
@@ -432,13 +454,14 @@ export async function scrapeIndeed({
           }
           pageJobs.push(job);
         }
-        const kept = filterByRequest(pageJobs, {
+        const { kept, dropped: why } = explainRequest(pageJobs, {
           hoursOld: preset.hoursOld,
           title: titleFilter,
           stack,
           years,
           jobType,
         });
+        for (const [reason, n] of Object.entries(why)) dropped[reason] += n;
         countryMatched.push(...kept);
         termMatched += kept.length;
 
@@ -452,6 +475,7 @@ export async function scrapeIndeed({
       }
     }
     matched.push(...countryMatched);
+    onProgress?.(`Indeed ${name}: ${scanned - scannedBefore} scanned → ${countryMatched.length} kept`);
   }
 
   if (!matched.length && failures.length) {
@@ -467,10 +491,21 @@ export async function scrapeIndeed({
   if (failures.length) {
     onProgress?.(`Indeed stopped early, results may be incomplete: ${failures.join("; ")}`);
   }
+  const leftOut = [
+    [dropped.title, titleFilter ? "not matching the title" : "not developer roles"],
+    [dropped.old, `older than ${preset.span}`],
+    [dropped.type, "other job types"],
+    [dropped.years, "asking for more years"],
+    [dropped.stack, "without the stack words"],
+    [notRemote, "hybrid or not remote"],
+    [elsewhere, "placed in other countries"],
+    [notOpen, "abroad, not open to Europe"],
+  ]
+    .filter(([n]) => n)
+    .map(([n, why]) => `${n} ${why}`);
   onProgress?.(
-    `Indeed: ${targets.length} ${targets.length === 1 ? "country" : "countries"}, ${scanned} scanned` +
-      `${elsewhere ? `, ${elsewhere} placed in other countries` : ""}` +
-      `${notOpen ? `, ${notOpen} abroad not open to Europe` : ""} → ${matched.length} matching`
+    `Indeed: ${targets.length} ${targets.length === 1 ? "country" : "countries"}, ${scanned} scanned → ${matched.length} matching` +
+      (leftOut.length ? `. Left out: ${leftOut.join(", ")}` : "")
   );
   // Newest first across countries; the same job posted in several countries
   // (title + company) counts once, the newest copy, before Count

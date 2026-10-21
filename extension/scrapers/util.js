@@ -9,12 +9,26 @@ export const DATE_PRESETS = {
   today: {
     id: "today",
     label: "Today (24 hours)",
+    span: "24 hours",
     hoursOld: 24,
   },
   "3days": {
     id: "3days",
     label: "3 days (72 hours)",
+    span: "3 days",
     hoursOld: 72,
+  },
+  week: {
+    id: "week",
+    label: "7 days",
+    span: "7 days",
+    hoursOld: 168,
+  },
+  month: {
+    id: "month",
+    label: "30 days",
+    span: "30 days",
+    hoursOld: 720,
   },
 };
 
@@ -87,12 +101,26 @@ export function acceptJob(job, { years, jobType } = {}) {
  * return the job description; boards searched with the stack words already
  * checked the whole posting.
  */
-export function filterByRequest(jobs, { title, stack, years, jobType, hoursOld } = {}) {
-  let out = jobs;
-  if (hoursOld) out = filterByHoursOld(out, hoursOld);
-  out = filterByTitle(out, title);
-  if (stack) out = filterByStack(out, stack);
-  return out.filter((job) => acceptJob(job, { years, jobType }));
+export function filterByRequest(jobs, opts = {}) {
+  return explainRequest(jobs, opts).kept;
+}
+
+/**
+ * filterByRequest() that also counts what each check left out, for the run
+ * summary: { kept, dropped: { old, title, stack, type, years } }.
+ */
+export function explainRequest(jobs, { title, stack, years, jobType, hoursOld } = {}) {
+  const dropped = { old: 0, title: 0, stack: 0, type: 0, years: 0 };
+  const kept = jobs.filter((job) => {
+    if (hoursOld && !withinHours(job.date_posted, hoursOld)) dropped.old += 1;
+    else if (!titleMatches(job.title, title)) dropped.title += 1;
+    else if (stack && !globalThis.jbStackMatches(job, stack)) dropped.stack += 1;
+    else if (!matchesEmployment(job, jobType)) dropped.type += 1;
+    else if (!withinExperience(job, years)) dropped.years += 1;
+    else return true;
+    return false;
+  });
+  return { kept, dropped };
 }
 
 /** Pass/fail for the posted-date window on one job (unknown dates pass). */

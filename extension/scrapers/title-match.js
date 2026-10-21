@@ -5,7 +5,7 @@
  *
  * Text is compared without case or accents in any EU language
  * ("Développeur" = "developpeur", "Straße" = "strasse", "Łódź" = "lodz"), and
- * the EU words for developer and engineer read as the English ones
+ * the EU words for developer, engineer and software read as the English ones
  * ("Backend-Entwickler", "Développeur Backend", "Programista Backend" all
  * match "Backend Developer").
  */
@@ -47,6 +47,11 @@
     [
       /(?<![\p{L}\p{N}])(?:ingenieur(?:in|e|s)?|ingeniero|ingegnere|inzynier|ingenjor|ingenior|insinoori|inzenyr|inginer|μηχανικ\p{L}*)(?![\p{L}\p{N}])/gu,
       "engineer",
+    ],
+    // Software ("Ingénieur logiciel", "Inżynier oprogramowania", "Ohjelmistokehittäjä")
+    [
+      /(?<![\p{L}\p{N}])(?:logiciels?|oprogramowania|ohjelmisto|softwaru|szoftver\p{L}*|programvara|programvare|λογισμικου?)(?![\p{L}\p{N}])/gu,
+      "software",
     ],
   ];
 
@@ -150,6 +155,11 @@
     return out;
   }
 
+  // Next to another word, developer, engineer and programmer name the same job
+  // ("Software Engineer" = "Software Developer" = "Softwareentwickler",
+  // "Backend Developer" = "Backend Engineer"); alone each stays itself
+  const ROLE_TOKENS = new Set(["developer", "engineer", "programmer"]);
+
   /** Every word of one comma-separated title is in the job title. */
   function jbTitleMatches(title, query) {
     const phrases = queryPhrases(query);
@@ -159,7 +169,12 @@
     const raw = fold(title).split(/[^\p{L}\p{N}+#]+/u).filter(Boolean);
     const joined = [...joinedWords(words), ...joinedWords(raw)];
     const inJoined = (t) => t.length >= 7 && joined.some((j) => j.startsWith(t));
-    return phrases.some((tokens) => tokens.every((t) => tokenInWords(t, words) || inJoined(t)));
+    const found = (t) => tokenInWords(t, words) || inJoined(t);
+    return phrases.some((tokens) =>
+      tokens.every((t) =>
+        tokens.length > 1 && ROLE_TOKENS.has(t) ? [...ROLE_TOKENS].some(found) : found(t)
+      )
+    );
   }
 
   /**

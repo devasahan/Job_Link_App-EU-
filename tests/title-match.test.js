@@ -16,14 +16,15 @@ test("fold drops case and accents in EU languages", () => {
   assert.equal(fold("ΠΡΟΓΡΑΜΜΑΤΙΣΤΗΣ"), "προγραμματιστησ");
 });
 
-test("developer and engineer in EU languages read as the English words", () => {
+test("developer, engineer and software in EU languages read as the English words", () => {
   assert.equal(words("Backend-Entwickler (m/w/d)"), "backend developer m w d");
   assert.equal(words("Softwareentwicklerin"), "software developer");
   assert.equal(words("Développeuse Full-Stack H/F"), "developer fullstack h f");
   assert.equal(words("Programista Python"), "developer python");
   assert.equal(words("Senior Systemutvecklare"), "senior system developer");
-  assert.equal(words("Ingénieur logiciel"), "engineer logiciel");
-  assert.equal(words("Μηχανικός Λογισμικού / Προγραμματιστής"), "engineer λογισμικου developer");
+  assert.equal(words("Ingénieur logiciel"), "engineer software");
+  assert.equal(words("Ohjelmistokehittäjä"), "software developer");
+  assert.equal(words("Μηχανικός Λογισμικού / Προγραμματιστής"), "engineer software developer");
 });
 
 test("titles match across languages", () => {
@@ -32,6 +33,19 @@ test("titles match across languages", () => {
   assert.ok(matches("Programista Java", "Java Developer"));
   assert.ok(matches("Ingeniero de software", "Software Engineer"));
   assert.equal(matches("Projektmanager", "Developer"), false);
+});
+
+test("next to another word, developer, engineer and programmer are one role", () => {
+  assert.ok(matches("Softwareentwickler (m/w/d)", "Software Engineer"));
+  assert.ok(matches("Software Developer", "Software Engineer"));
+  assert.ok(matches("Ingénieur logiciel", "Software Engineer"));
+  assert.ok(matches("Développeur logiciel", "Software Engineer"));
+  assert.ok(matches("Backend Engineer", "Backend Developer"));
+  assert.ok(matches("Java Programmer", "Java Developer"));
+  // Alone, each stays itself
+  assert.equal(matches("Sales Engineer", "Developer"), false);
+  assert.equal(matches("Developer Advocate", "Engineer"), false);
+  assert.equal(matches("Software Engineer", "Engineering Manager"), false);
 });
 
 test("the US version's synonyms still hold", () => {

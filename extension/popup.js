@@ -1,6 +1,7 @@
 import { downloadedCount, forgetDownloaded } from "./scrapers/history.js";
 import { ALL_COUNTRIES, EU_CODES, describeCountries } from "./scrapers/countries.js";
 import { BOARD_COUNTRIES } from "./scrapers/index.js";
+import { DATE_PRESETS } from "./scrapers/util.js";
 
 const form = document.getElementById("fetch-form");
 const statusEl = document.getElementById("status");
@@ -102,7 +103,7 @@ async function restoreForm() {
   if (saved.title) form.title.value = saved.title;
   if (saved.stack) form.stack.value = saved.stack;
   if (saved.count) form.count.value = String(saved.count);
-  if (saved.date_preset === "today" || saved.date_preset === "3days") {
+  if (Object.hasOwn(DATE_PRESETS, saved.date_preset)) {
     form.date_preset.value = saved.date_preset;
   }
   if (["fulltime", "contract", "both"].includes(saved.job_type)) {
@@ -167,8 +168,7 @@ form.addEventListener("submit", async (event) => {
   const title = form.title.value.trim();
   const stack = form.stack.value.trim();
   const count = Math.max(1, Math.min(200, Number(form.count.value) || 50));
-  const datePreset =
-    form.date_preset.value === "3days" ? "3days" : "today";
+  const datePreset = Object.hasOwn(DATE_PRESETS, form.date_preset.value) ? form.date_preset.value : "today";
   const jobType = ["contract", "both"].includes(form.job_type.value) ? form.job_type.value : "fulltime";
   const yearsRaw = form.years.value.trim();
   let years = "";

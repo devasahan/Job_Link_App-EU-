@@ -99,7 +99,16 @@ test("search terms: each title, or developer in English and the local language",
   assert.deepEqual(searchTerms("", "React", "SE"), ["developer React", "utvecklare React"]);
   // Every country Indeed covers has its own words
   for (const code of Object.keys(INDEED_SITES)) assert.ok(searchTerms("", "", code).length >= 2, code);
-  assert.deepEqual(searchTerms("Backend Developer, Platform Engineer", "", "FR"), ["Backend Developer", "Platform Engineer"]);
+  // A typed title is also searched with the country's own word for developer
+  assert.deepEqual(searchTerms("Backend Developer, Platform Engineer", "", "FR"), [
+    "Backend Developer",
+    "Platform Engineer",
+    "Backend développeur",
+  ]);
+  assert.deepEqual(searchTerms("Software Engineer", "", "DE"), ["Software Engineer", "Software Entwickler"]);
+  assert.deepEqual(searchTerms("Java Dev", "", "BE"), ["Java Dev", "Java développeur", "Java ontwikkelaar"]);
+  assert.deepEqual(searchTerms("Software Engineer", "", "IE"), ["Software Engineer"]);
+  assert.deepEqual(searchTerms("DevOps", "", "DE"), ["DevOps"]);
   // Employers abroad: each search also names where the job may be held
   assert.deepEqual(searchTerms("Backend Developer", "Go", "US", { abroad: true }), [
     "Backend Developer Go Europe",
@@ -222,7 +231,7 @@ test("employers abroad count only when the posting is open to Europe or a ticked
   );
   const usTerms = calls.filter((c) => c.country === "US").map((c) => c.query.match(/what: "([^"]*)"/)[1]);
   assert.deepEqual(usTerms.slice(0, 3), ["developer Europe", "developer EMEA", "developer worldwide"]);
-  assert.ok(log.some((m) => /2 abroad not open to Europe/.test(m)));
+  assert.ok(log.some((m) => /2 abroad, not open to Europe/.test(m)));
 });
 
 test("scrapeIndeed pages with the cursor and stops at Count", async () => {
@@ -230,8 +239,8 @@ test("scrapeIndeed pages with the cursor and stops at Count", async () => {
     if (!/cursor:/.test(call.query)) return page([rawJob("a"), rawJob("b")], "next1");
     return page([rawJob("c"), rawJob("d")], "next2");
   });
-  // One title: one search, paged until Count matches
-  const jobs = await scrapeIndeed({ countries: ["DE"], title: "Backend Developer", resultsWanted: 3, datePreset: "today" });
+  // A title without a role word: one search, paged until Count matches
+  const jobs = await scrapeIndeed({ countries: ["DE"], title: "Backend", resultsWanted: 3, datePreset: "today" });
   assert.equal(calls.length, 2);
   assert.equal(jobs.length, 3);
 });
@@ -312,8 +321,12 @@ test("every search runs, and a job posted in several countries counts once (the 
   assert.deepEqual(calls.map((c) => `${c.country} ${c.query.match(/what: "([^"]*)"/)[1]}`), [
     "AT Backend Developer",
     "AT Frontend Developer",
+    "AT Backend Entwickler",
+    "AT Frontend Entwickler",
     "DE Backend Developer",
     "DE Frontend Developer",
+    "DE Backend Entwickler",
+    "DE Frontend Entwickler",
   ]);
   // The newer German copy of the Acme job is kept, the Austrian one dropped
   assert.deepEqual(jobs.map((j) => j.job_url.split("jk=")[1]).sort(), ["AT-fe", "DE-be", "DE-fe"]);
@@ -369,4 +382,34 @@ test("scrapeIndeed fails when every country fails", async () => {
   mockFetch(() => new Response("{}", { status: 500 }));
   await assert.rejects(scrapeIndeed({ countries: ["DE"], resultsWanted: 5, datePreset: "today" }), /Indeed HTTP 500/);
   await assert.rejects(scrapeIndeed({ countries: ["HR"], resultsWanted: 5, datePreset: "today" }), /no site/);
+});
+
+test("the run log says what each check left out", async () => {
+  mockFetch(() =>
+    page([
+      rawJob("ok"),
+      rawJob("old", { dateOnIndeed: Date.now() - 40 * HOUR }),
+      rawJob("pm", { title: "Product Manager" }),
+      rawJob("intern", { title: "Werkstudent Softwareentwicklung" }),
+      rawJob("hybrid", { attributes: [{ key: "DSQF7" }, { key: "PAXZC" }] }),
+      rawJob("at", { location: { countryCode: "AT" } }),
+    ])
+  );
+  const log = [];
+  const jobs = await scrapeIndeed({
+    countries: ["DE"],
+    resultsWanted: 10,
+    datePreset: "today",
+    jobType: "fulltime",
+    onProgress: (m) => log.push(m),
+  });
+  assert.deepEqual(jobs.map((j) => j.job_url.split("jk=")[1]), ["ok"]);
+  assert.ok(log.includes("Indeed Germany: 6 scanned → 1 kept"), log.join("\n"));
+  assert.ok(
+    log.includes(
+      "Indeed: 1 country, 6 scanned → 1 matching. Left out: 1 not developer roles, 1 older than 24 hours, " +
+        "1 other job types, 1 hybrid or not remote, 1 placed in other countries"
+    ),
+    log.join("\n")
+  );
 });
