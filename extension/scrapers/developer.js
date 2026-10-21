@@ -13,10 +13,15 @@
  *      policy, course content or events ("Projektentwickler",
  *      "forretningsudvikler", "Développeur foncier", "Curriculum Developer",
  *      "Music Programmer"), developer relations, sales / solutions / support /
- *      security / network engineers, marketing, design and teaching;
- *   2. hardware, machine programming (PLC, CNC), other engineering
- *      disciplines, renewable-energy projects and manual testing only with a
- *      software word ("Firmware-/Elektronikentwickler");
+ *      applications / security / network engineers, product and project
+ *      managers, marketing, design and teaching;
+ *   2. hardware, electronics, machine programming (PLC, CNC), other
+ *      engineering disciplines, data centres and manual testing only with a
+ *      word that names software work ("Firmware-/Elektronikentwickler",
+ *      "Senior iOS Engineer – Connected Hardware"); the same goes for
+ *      developers of renewable-energy projects and for one-word compounds
+ *      whose stem names something else ("Verfahrensentwickler",
+ *      "Entwicklungsingenieur Mobile Arbeitsmaschinen");
  *   3. developer, programmer, DevOps, SRE, frontend/backend/fullstack, mobile,
  *      test automation, CTO, tech lead… always count, but Finnish kehittäjä
  *      and Hungarian fejlesztő alone need a software word;
@@ -35,6 +40,12 @@
   const words = (list) => new RegExp(`${NB}(?:${alt(list)})${NA}`, "u");
   const pattern = (source) => new RegExp(source, "u");
   const any = (...res) => ({ test: (s) => res.some((re) => re.test(s)) });
+  // Gender endings after a role word: "Ingénieur(e)", "Desarrollador/a",
+  // "Sviluppatore/trice", "Développeur·se", "Programista/ka"
+  const GENDER = "(?: (?:e|se|euse|a|trice|ka))?";
+  // Prepositions between a Romance role word and what follows it
+  // ("Développeur de projets", "Ingeniero de datos", "Inżynier ds. sprzedaży")
+  const OF = "(?: (?:de|di|du|des|del|della|dei|da|do|dos|d|en|in|af|av|ds))?";
 
   // Programming languages, for trainees and specialists and as words that name
   // software work (Go and Swift are left out: "Go-to-Market", SWIFT payments)
@@ -134,7 +145,7 @@
     "festival",
   ];
   // …or say so in a word before it ("Content Developer", "Land Developer",
-  // "Music Programmer")…
+  // "Music Programmer", "HR-utvecklare")…
   const OTHER_DEVELOPER_BEFORE = [
     "business",
     "property",
@@ -142,12 +153,20 @@
     "land",
     "plan",
     "team",
+    "policy",
+    "hr",
+    "proposal",
+    "bid",
+    "franchise",
     "content",
     "curriculum",
     "course",
     "courseware",
     "training",
     "instructional",
+    // learning and development
+    "learning",
+    "assessment",
     "e learning",
     "elearning",
     "lesson",
@@ -176,8 +195,9 @@
     "cultural",
     "theatre",
   ];
-  // …or after it, mostly in Romance languages ("Développeur foncier",
-  // "Développeur de projets", "Sviluppatore di prodotti", "Programador cultural",
+  // …or after it, mostly in Romance languages, with or without a preposition
+  // ("Développeur foncier", "Développeur de projets", "Desarrollador/a de
+  // negocio", "Sviluppatore di prodotti", "Programador de producción",
   // "Programator producție", "Utvikler bolig")
   const OTHER_DEVELOPER_AFTER = [
     "foncier",
@@ -196,31 +216,34 @@
     "productie",
     "productiei",
     "produccion",
+    "producao",
     "produzione",
     "παραγωγησ",
-    "de projets",
-    "de projet",
-    "de proyectos",
-    "de negocio",
-    "de negocios",
-    "d affaires",
-    "de afaceri",
+    "projets",
+    "projet",
+    "proyectos",
+    "projetos",
+    "progetti",
+    "negocio",
+    "negocios",
+    "affaires",
     "afaceri",
-    "de eventos",
     "eventos",
-    "di eventi",
+    "eventi",
     "produit",
     "produits",
-    "de produits",
     "prodotto",
     "prodotti",
-    "di prodotto",
-    "di prodotti",
-    "de producto",
-    "de productos",
-    "de e learning",
+    "producto",
+    "productos",
+    "e learning",
     "e learningu",
-    "af e laering",
+    "e laering",
+    "aprendizaje electronico",
+    "aprendizagem eletronica",
+    "apprendimento elettronico",
+    "elektronickeho vzdelavania",
+    "elektronickeho vzdelavani",
     "cultural",
     "culturel",
     "culturale",
@@ -244,9 +267,11 @@
       "field service engineer",
       "support engineer",
       "implementation engineer",
-      "application engineer",
-      "applications engineer",
       "applikations engineer",
+      "anwendungs engineer",
+      // SAFe programme roles
+      "release train engineer",
+      "solution train engineer",
       "customer engineer",
       "onboarding engineer",
       "sales development",
@@ -264,56 +289,128 @@
       "devrel",
     ]),
     pattern(`${NB}(?:${alt(OTHER_DEVELOPER_STEMS)})\\p{L}* developer`),
-    pattern(`${NB}(?:${alt(OTHER_DEVELOPER_BEFORE)}) (?:developers?|programmers?)${NA}`),
-    pattern(`${NB}developer(?: e| se| euse)? (?:${alt(OTHER_DEVELOPER_AFTER)})${NA}`),
-    // Developer relations: "developer" names the audience ("Developer Advocate",
-    // "Head of Developer Relations", "Developer Experience Engineer")
+    // …but a "Deep Learning Developer" or an "SAP HR Developer" writes code
+    pattern(`(?<!deep|reinforcement|sap)${NB}(?:${alt(OTHER_DEVELOPER_BEFORE)}) (?:developers?|programmers?)${NA}`),
+    // Sales engineers in other languages ("Vertriebsingenieur", "Salgsingeniør");
+    // Romance word order is ENGINEER_OTHER below
+    pattern(`${NB}(?:vertriebs|salgs|salj|myynti|kereskedelmi) engineer${NA}`),
+    // Applications engineers support a product for its customers ("Field
+    // Applications Engineer", "Ingénieur d'applications"), unless the
+    // application is software ("Web Application Engineer")
     pattern(
-      `${NB}developer (?:relations?|advocates?|advocacy|evangelists?|experience|marketing|content|community|education|educators?|success|outreach|enablement|programs?|programmes?|ecosystem)${NA}`
-    ),
-    // Sales engineers in other languages ("Vertriebsingenieur", "Salgsingeniør",
-    // "Ingénieur commercial", "Ingeniero de ventas")
-    pattern(
-      `${NB}(?:vertriebs|salgs|salj|myynti|kereskedelmi) engineer${NA}|${NB}engineer(?: e| a)? (?:commercial|commerciale|comercial|d affaires|de ventas|ventas|vendite|sprzedazy|de vanzari|vanzari|πωλησεων)${NA}`
+      `(?<!web|mobile|software|cloud|ios|android|frontend|backend|fullstack|saas)${NB}applications? engineers?${NA}|${NB}engineer${GENDER} d applications?${NA}`
     ),
     // IT operations: security and network engineers ("Cloud Security Engineer",
     // "Netzwerkingenieur", "Ingénieur réseaux"), unless they secure software
-    // ("Application Security Engineer")
+    // ("Application Security Engineer", "Ingénieur sécurité logicielle");
+    // a "Neural Network Engineer" builds models
     pattern(
-      `(?<!application|product|software|appsec)${NB}(?:security|cybersecurity|network|netzwerk|netwerk|sitovy) (?:engineers?|architects?)${NA}|${NB}engineer(?: e| a)? (?:de |en |di )?(?:securite|seguridad|sicurezza|bezpieczenstwa|reseaux?|redes|rete|sieci)${NA}`
+      `(?<!application|product|software|appsec|neural)${NB}(?:security|cybersecurity|network|netzwerk|netwerk|sitovy) (?:engineers?|architects?)${NA}|${NB}engineer${GENDER}${OF} (?:(?:securite|seguridad|sicurezza|bezpieczenstwa)(?!${OF} (?:software|applicati|aplicac|applicazion))|reseaux?|redes|rete|sieci)${NA}`
     ),
     // Marketing jobs at software companies: "Growth Marketing Manager (AI Software)"
     pattern(`${NB}(?:marketing|growth|content|brand|communications?) (?:manager|specialist|lead|director|executive)${NA}`),
-    // Not building software
+    // Managers of a product or project ("Product Owner Softwareentwicklung",
+    // "Projektmanager Software", "Chef de projet web")
     pattern(
-      `designer|${NB}(?:recruit\\p{L}*|teacher|lecturer|dozent\\p{L}*|trainer|tutor)${NA}|${NB}(?:sales|account executive|account manager)${NA}`
+      `${NB}(?:product|project|projekt|prosjekt|program|programme|delivery) ?(?:managers?|managerin|owners?|leiter\\p{L}*|leder|ledare)${NA}|${NB}scrum masters?${NA}|${NB}(?:chef|cheffe|jefe|jefa|responsable|responsabile|gerente)${OF} (?:projet|projets|proyecto|proyectos|progetto|progetti|produit|producto|prodotto)${NA}`
+    ),
+    // Not building software: design, recruiting, account sales and teaching in EU
+    // languages ("Formateur Développeur Web", "Docente di Sviluppo Web",
+    // "Ausbilder Fachinformatiker Anwendungsentwicklung")
+    pattern(
+      `(?<!software )designer|${NB}(?:recruit\\p{L}*|teachers?|lecturers?|instructors?|trainer|tutor|dozent\\p{L}*|docent(?:e|es|i|en)?|lehrer\\p{L}*|lehrkraft|ausbilder\\p{L}*|leraar|format(?:eur|rice|ore|ori|or|oare)s?|formador(?:a|es|as)?|profes(?:or|sor)(?:a|es|as)?|professeur(?:e|s)?|insegnant[ei]|wykladowca|nauczyciel\\p{L}*|ucitel\\p{L}*|lektor(?:in)?|opettaja|kouluttaja|underviser|laerer|larare|oktato|καθηγητ\\p{L}*|εκπαιδευτ\\p{L}*)${NA}|${NB}(?:account executive|account manager)${NA}`
     )
   );
 
+  // "developer" names the audience ("Developer Advocate", "Head of Developer
+  // Relations", "Developer Experience Engineer", "Technical Writer – Developer
+  // Documentation"), but after a role word or a programming language it names
+  // the team or the work ("Senior Software Engineer, Developer Experience",
+  // "Java Developer – Support & Maintenance")
+  const AUDIENCE = pattern(
+    `${NB}developer (?:relations?|advocates?|advocacy|evangelists?|experience|marketing|content|community|education|educators?|success|outreach|enablement|programs?|programmes?|ecosystem|documentation|docs|support)${NA}`
+  );
+  // Sales after a role word names the team ("Software Engineer – Sales Platform")
+  const SALES = words(["sales"]);
+  // Romance titles say which engineer after the word ("Ingénieur commercial",
+  // "Ingeniero de ventas", "Ingénieur Support Logiciel", "Ingeniero/a de
+  // Soluciones Cloud"); after a software word it names the team ("Software
+  // Engineer – Solutions")
+  const ENGINEER_OTHER = pattern(
+    `${NB}engineer${GENDER}${OF} (?:commercial|commerciale|comercial|affaires|ventas|vendite|sprzedazy|vanzari|πωλησεων|support|soporte|supporto|suporte|wsparcia|avant vente|preventa|pre venta|prevendita|pre vendita|solutions|soluciones|soluzioni|solucoes)${NA}`
+  );
+  // What a Romance developer develops comes after the word ("Développeur
+  // foncier"); after a software word the phrase names the business instead
+  // (".NET Developer - Commercial Insurance")
+  const DEVELOPS_OTHER = pattern(`${NB}developer${GENDER}${OF} (?:${alt(OTHER_DEVELOPER_AFTER)})${NA}`);
+  /** re matches s with no `before` word ahead of the match. */
+  const leads = (re, s, before) => {
+    const m = re.exec(s);
+    return !!m && !before.test(s.slice(0, m.index));
+  };
+
   // Test automation in either word order ("Testautomatisierung", "testiautomaatio",
   // "QA Automation", "Automation Tester", "automatyzacji testów",
-  // "automazione dei test")
+  // "automazione dei test"), also next to manual testing ("QA Engineer (Manual &
+  // Automation)", "Tester manuell und automatisiert")
   const TEST_AUTOMATION = pattern(
-    `${NB}(?:qa|tests?|testing|testi|teszt) ?automa|${NB}automa\\p{L}*(?: (?:de|des|dei|di|do|of))? (?:qa|tests?|testing|testers?|testow|testu|testes|pruebas|teszt\\p{L}*)${NA}`
+    `${NB}(?:qa|tests?|testing|testi|teszt) ?automa|${NB}automa\\p{L}*(?: (?:de|des|dei|di|do|of))? (?:qa|tests?|testing|testers?|testow|testu|testes|pruebas|teszt\\p{L}*)${NA}|${NB}manu[ae]\\p{L}*(?: \\p{L}+){0,2} automa`
   );
 
-  // Words that name software work, for the fields below
-  const CODE = any(words(["software", "firmware", "frontend", "backend", "fullstack", "devops", "rpa", ...LANGUAGES]), TEST_AUTOMATION);
+  // Software compounds and phrases that name the work ("Softwarearchitekt",
+  // "Werkstudent Softwareentwicklung", "Ohjelmistokehitysharjoittelija",
+  // "Informatiker Applikationsentwicklung", "Software-Development")…
+  const SOFTWARE_COMPOUND = pattern(
+    `${NB}(?:software|ohjelmisto|mjukvaru|programvaru|szoftver|anwendungs|applikations|web|app|spiele) ?(?:entwickl|ontwikkel|utveckl|udvikl|utvikl|kehit|fejleszt|development|architekt|arkitekt|arkkiteh|suunnittelij)`
+  );
+  // …and with development first ("Ingénieur Études et Développement",
+  // "Développement logiciel", "Desarrollo de software", "udvikling af software",
+  // "Μηχανικός ανάπτυξης λογισμικού")
+  const DEVELOPMENT_OF_SOFTWARE = pattern(
+    `${NB}(?:etudes et developpement|(?:developpement|desarrollo|desenvolvimento|sviluppo|dezvoltare|rozwoj|vyvoj|ontwikkeling|entwicklung|udvikling|utveckling|utvikling|development|αναπτυξησ?)(?: (?:de|du|des|del|di|do|da|van|von|af|av|of))? (?:software|informatique|informatico|informatica|web|applications?|aplicaciones|applicazioni|aplicacoes|aplicatii|εφαρμογων|εφαρμογησ|mobile))${NA}`
+  );
 
-  // Hardware, machines, other engineering disciplines, energy projects and
-  // manual testing: another job unless the title also names software
-  // ("Firmware-/Elektronikentwickler", "Automotive Software Engineer")
+  // Words that name software work, for the fields below: they outweigh a
+  // hardware or machine word ("Senior iOS Engineer – Connected Hardware",
+  // "Werkstudent Softwareentwicklung Leistungselektronik", "Hardwarenaher
+  // Embedded-Entwickler" writes software close to the hardware)
+  const CODE = any(
+    pattern(`${NB}hardwarenah\\p{L}*${NA}`),
+    words([
+      "software",
+      "firmware",
+      "frontend",
+      "backend",
+      "fullstack",
+      "devops",
+      "rpa",
+      "web",
+      "app",
+      "apps",
+      "ios",
+      "android",
+      "flutter",
+      "react native",
+      ...LANGUAGES,
+    ]),
+    SOFTWARE_COMPOUND,
+    DEVELOPMENT_OF_SOFTWARE,
+    TEST_AUTOMATION
+  );
+
+  // Hardware, machines, other engineering disciplines, data centres and
+  // manual testing: another job unless the title also names software work
+  // ("Firmware-/Elektronikentwickler", "Mechanical Engineer"). Industries
+  // ("Automotive", "Construction Tech") are left out: they name where a
+  // developer works, not what they build
   const OTHER_FIELD = any(
     inside([
-      // hardware and electronics
+      // hardware
       "hardware",
       "hardver",
       "pcb",
       "mikrochip",
       "microchip",
-      "elektroni",
-      "electroni",
-      "elettroni",
       "rf engineer",
       // other engineering
       "mechanical",
@@ -331,23 +428,25 @@
       "elektrotechn",
       "process engineer",
       "chemical",
-      "manufacturing",
-      "maintenance",
       "hvac",
-      "construction",
       "maschinenbau",
       "werktuigbouw",
       "verfahrenstechn",
       "bau engineer",
       "konstrukt",
       "biomedical",
-      "aerospace",
-      "automotive",
       "highway",
       "geotechn",
       "moulding",
       "molding",
     ]),
+    // Electronics as the discipline, also at the end of a compound
+    // ("Elektronikentwickler", "Leistungselektronikentwickler", "Electronics
+    // Engineer", "Ingénieur électronique", "Vývojář elektroniky"), not
+    // "Electronic Trading" or "Facturation électronique"
+    pattern(
+      `${NB}electronics${NA}|${NB}elektronik\\p{L}*${NA}|elektronik (?:developer|engineer)|${NB}(?:developer|engineer)${GENDER}${OF} (?:electroni|elettroni)\\p{L}*${NA}`
+    ),
     // Machine and production programmers ("Programista CNC", "SPS-Programmierer",
     // "Roboterprogrammierer"); Robot Framework is a test tool
     pattern(`${NB}(?:robot|roboter|robotow|robotu|robotti)${NA}(?! framework)`),
@@ -365,22 +464,23 @@
       "control numerico",
       "controllo numerico",
       "numeerinen ohjaus",
-      // renewable energy ("Développeur de projets éoliens")
-      "eolien",
-      "eoliens",
-      "eolienne",
-      "eoliennes",
-      "photovoltaique",
-      "photovoltaiques",
-      "photovoltaic",
-      "photovoltaik",
-      "enr",
-      "renouvelable",
-      "renouvelables",
-      "renewable",
-      "renewables",
-      "renovables",
-      "rinnovabili",
+      "sterowanych numerycznie",
+      "sterowane numerycznie",
+      "cislicove rizene",
+      "cislicove rizenych",
+      // data centre operations ("Data Centre Engineer", "Ingeniero de centro de datos")
+      "data center",
+      "data centre",
+      "data centers",
+      "data centres",
+      "datacenter",
+      "datacentre",
+      "rechenzentrum",
+      "centro de datos",
+      "centro de dados",
+      "centre de donnees",
+      "centro dati",
+      "centrum danych",
       // manual testing
       "manual",
       "manuell",
@@ -399,26 +499,19 @@
 
   const STRONG = any(
     inside(["devops", "devsecops", "mlops", "frontend", "backend", "fullstack"]),
-    // Software compounds and phrases that name the work ("Softwarearchitekt",
-    // "Werkstudent Softwareentwicklung", "Ohjelmistokehitysharjoittelija",
-    // "Informatiker Applikationsentwicklung", "Software-Development")
-    pattern(
-      `${NB}(?:software|ohjelmisto|mjukvaru|programvaru|szoftver|anwendungs|applikations|web|app|spiele) ?(?:entwickl|ontwikkel|utveckl|udvikl|utvikl|kehit|fejleszt|development|architekt|arkitekt|arkkiteh|suunnittelij)`
-    ),
-    // …and with development first ("Ingénieur Études et Développement",
-    // "Développement logiciel", "Desarrollo de software", "udvikling af software",
-    // "Μηχανικός ανάπτυξης λογισμικού")
-    pattern(
-      `${NB}(?:etudes et developpement|(?:developpement|desarrollo|desenvolvimento|sviluppo|dezvoltare|rozwoj|vyvoj|ontwikkeling|entwicklung|udvikling|utveckling|utvikling|development|αναπτυξησ?)(?: (?:de|du|des|del|di|do|da|van|von|af|av|of))? (?:software|informatique|informatico|informatica|web|applications?|aplicaciones|applicazioni|aplicacoes|aplicatii|εφαρμογων|εφαρμογησ|mobile))${NA}`
-    ),
+    SOFTWARE_COMPOUND,
+    DEVELOPMENT_OF_SOFTWARE,
     // Designers of software in most EU languages ("Concepteur logiciel",
     // "Progettista di software", "Projektant oprogramowania", "Software ontwerper")
     pattern(
-      `${NB}(?:concept(?:eur|rice)s?|disenador(?:a|es|as)?|progettist[ai]|projektan(?:t|tka|ci)|ontwerpers?|proiectant(?:a)?|suunnittelij(?:a|at)|σχεδιαστ\\p{L}*)(?: (?:de|di|del|dei|of|van))? software${NA}|${NB}software (?:ontwerpers?|suunnittelij(?:a|at))${NA}`
+      `${NB}(?:concept(?:eur|rice)s?|disenador(?:a|es|as)?|progettist[ai]|projektan(?:t|tka|ci)|ontwerpers?|proiectant(?:a)?|suunnittelij(?:a|at)|σχεδιαστ\\p{L}*)(?: (?:de|di|del|dei|of|van))? software${NA}|${NB}software (?:designers?|ontwerpers?|suunnittelij(?:a|at))${NA}`
     ),
     TEST_AUTOMATION,
-    // Engineering leadership ("VP of Engineering", "Engineering Manager")
-    pattern(`${NB}(?:vp|svp|vice president|head|director)(?: of)? engineering${NA}|${NB}engineering (?:manager|managers|lead|director)${NA}`),
+    // Engineering leadership ("VP of Engineering", "Engineering Manager"), not
+    // of customer-facing engineers ("Solutions Engineering Manager")
+    pattern(
+      `${NB}(?:vp|svp|vice president|head|director)(?: of)? engineering${NA}|(?<!solutions?|sales|presales|customer|support|field)${NB}engineering (?:manager|managers|lead|director)${NA}`
+    ),
     // French web integrators build front ends ("Intégrateur Web WordPress")
     pattern(`${NB}integrat(?:eur|rice)s?(?: e)? (?:web|html|front)`),
     words([
@@ -562,11 +655,11 @@
     "adat",
     "datovy",
     "de date",
+    "δεδομενων",
     "analytics",
     "ml",
     "ai",
-    // AI in Romance languages and German ("Ingénieur IA", "KI-Ingenieur")
-    "ia",
+    // AI in German ("KI-Ingenieur"); Romance "IA" is AI_AFTER below
     "ki",
     "llm",
     "genai",
@@ -591,6 +684,7 @@
     "release",
     "build",
     "compiler",
+    "kernel",
     "graphics",
     "application security",
     "appsec",
@@ -621,6 +715,9 @@
     "games",
     "gameplay",
     "computer vision",
+    "deep learning",
+    "neural network",
+    "neural networks",
     "robotics",
     "growth",
     "martech",
@@ -645,16 +742,89 @@
     "felulet",
   ]);
 
+  // Words before an audience or sales phrase that make it a team (see leads())
+  const ROLE_WORD = any(ROLE, DEVELOPER);
+  const ROLE_OR_LANGUAGE = any(ROLE, DEVELOPER, LANGUAGE);
+
+  // Romance "IA" (AI) right after the role word ("Ingénieur(e) I.A",
+  // "Ingeniero/a de IA"): elsewhere it can be Iowa ("Project Engineer – Ames, IA")
+  const AI_AFTER = pattern(`${NB}(?:engineer|archite\\p{L}*|arquite\\p{L}*|arhitect\\p{L}*)${GENDER}${OF} ia${NA}`);
+
+  // Developers of renewable-energy projects ("Développeur EnR", "Solar
+  // Developer", "Développeur et gestionnaire de projets éoliens"), unless a
+  // software word says they build its software ("Senior Developer – Solar
+  // Monitoring Platform")
+  const ENERGY_PROJECT = words([
+    "eolien",
+    "eoliens",
+    "eolienne",
+    "eoliennes",
+    "photovoltaique",
+    "photovoltaiques",
+    "photovoltaic",
+    "photovoltaik",
+    "pv",
+    "solar",
+    "wind",
+    "windkraft",
+    "windenergie",
+    "enr",
+    "renouvelable",
+    "renouvelables",
+    "renewable",
+    "renewables",
+    "renovables",
+    "rinnovabili",
+  ]);
+
+  // One-word compounds name what is developed or engineered in the stem
+  // ("Verfahrensentwickler", "Hankekehittäjä", "Entwicklungsingenieur"), so
+  // when the stem is not software the title needs a CODE word. Hyphenated
+  // forms ("Linux-Kernel-Entwickler", "HR-utvecklare") are left to the words
+  const COMPOUND_DEVELOPER =
+    /(?<![\p{L}\p{N}])(\p{L}+?)(?:entwickler|ontwikkelaar|utvecklare|udvikler|utvikler|kehittaja|fejleszto|programmierer|programmerare|programmerer|programmor|ohjelmoija|programozo)/u;
+  const COMPOUND_ENGINEER = /(?<![\p{L}\p{N}])(\p{L}+?)(?:ingenieur|ingenjor|ingenior|insinoori|mernok)/u;
+  // Developer stems that name software besides the SOFTWARE words and
+  // LOCAL_SOFTWARE ("Systemutvecklare", "Anwendungsentwickler",
+  // "Spieleentwickler", "Applikasjonsutvikler", "Toepassingsontwikkelaar",
+  // "Tekoälykehittäjä", "Lösningsutvecklare") or a seniority ("Chefentwickler",
+  // "Seniorudvikler"); short ones must be the whole stem ("Spielzeugentwickler"
+  // is a toy developer)
+  const SOFTWARE_STEM =
+    /^(?:(?:spiel|spel|spil|spill|peli|moln|pilvi|sky|tool|senior|junior|lead|chef|haupt|paa)$|softwar|ohjelm|mjukvar|program|szoftver|system|systeem|rendszer|jarjestelm|anwendung|applikation|applikasjon|applicatie|toepassing|alkalmaz|sovellu|web|verkko|mobil|mobiili|plattform|platform|data|daten|tietokan|adatbazis|spiele|jatek|pelin|tekoaly|ratkaisu|losning|losung|granssnitt|schnittstell|kayttoliittym|kernel|treiber|integra|middleware|algorithm)/u;
+  const namesSoftware = (stem) => {
+    const s = globalThis.jbNormalizeWords(stem).join(" ");
+    return SOFTWARE.test(s) || CODE.test(s);
+  };
+  const developerStem = (stem) => SOFTWARE_STEM.test(stem) || LOCAL_SOFTWARE.test(stem) || namesSoftware(stem);
+  /** The title is a one-word compound whose stem names no software. */
+  const otherCompound = (folded, compound, isSoftware) => {
+    const m = compound.exec(folded);
+    return !!m && !isSoftware(m[1]);
+  };
+
   function jbIsDeveloperTitle(title) {
     const s = globalThis.jbNormalizeWords(title).join(" ");
     if (!s || EXCLUDE.test(s)) return false;
-    if (OTHER_FIELD.test(s) && !CODE.test(s)) return false;
+    if (leads(AUDIENCE, s, ROLE_OR_LANGUAGE) || leads(SALES, s, ROLE_WORD)) return false;
+    if (leads(ENGINEER_OTHER, s, SOFTWARE)) return false;
+    // A programming language anywhere also makes it the business area
+    // ("Developer – Commercial Systems (C#)")
+    if (leads(DEVELOPS_OTHER, s, SOFTWARE) && !LANGUAGE.test(s)) return false;
+    // CODE only matters to the gates, so it is tested when one needs it
+    let code;
+    const namesCode = () => (code ??= CODE.test(s));
+    if (OTHER_FIELD.test(s) && !namesCode()) return false;
     if (STRONG.test(s)) return true;
+    const folded = globalThis.jbFold(title);
     if (DEVELOPER.test(s)) {
-      return !BARE_LOCAL_DEVELOPER.test(globalThis.jbFold(title)) || SOFTWARE.test(s) || LOCAL_SOFTWARE.test(s);
+      if (ENERGY_PROJECT.test(s) && !SOFTWARE.test(s)) return false;
+      if (otherCompound(folded, COMPOUND_DEVELOPER, developerStem) && !namesCode()) return false;
+      return !BARE_LOCAL_DEVELOPER.test(folded) || SOFTWARE.test(s) || LOCAL_SOFTWARE.test(s);
     }
     if (LANGUAGE.test(s) && CODER.test(s) && !OTHER_JOB.test(s)) return true;
-    return ROLE.test(s) && SOFTWARE.test(s);
+    if (otherCompound(folded, COMPOUND_ENGINEER, namesSoftware) && !namesCode()) return false;
+    return ROLE.test(s) && (SOFTWARE.test(s) || AI_AFTER.test(s));
   }
 
   globalThis.jbIsDeveloperTitle = jbIsDeveloperTitle;

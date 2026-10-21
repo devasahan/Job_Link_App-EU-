@@ -64,6 +64,41 @@ const DEVELOPER = [
   "Concepteur logiciel",
   "Μηχανικός ανάπτυξης λογισμικού",
   "Werkstudent Python (m/w/d)",
+  // An industry or a hardware word next to software work
+  "Senior iOS Engineer – Connected Hardware (Remote)",
+  "Werkstudent Softwareentwicklung Leistungselektronik (m/w/d)",
+  "Hardwarenaher Embedded-Entwickler (m/w/d)",
+  "Android-Entwickler Automotive (m/w/d)",
+  "Junior Web Developer (Construction Tech)",
+  "Data Engineer – Renewable Energy (Remote UK)",
+  "Electronic Trading Developer",
+  "Développeur Web – Facturation Électronique (H/F)",
+  "QA Engineer (Manual & Automation)",
+  // Web and mobile application engineers
+  "Senior Web Application Engineer (Remote, EU)",
+  "Mobile Applications Engineer – iOS",
+  // A team or business area after the role ("developer experience", "commercial", "sales")
+  "Senior Software Engineer, Developer Experience",
+  "Staff Engineer, Developer Experience (Remote)",
+  "Java Developer – Support & Maintenance",
+  ".NET Developer - Commercial Insurance (Remote)",
+  "Java Developer, Commercial Lending Platform",
+  "Software Engineer – Sales Platform",
+  "Backend Engineer, Support Tools",
+  // One-word compounds whose stem names software
+  "Spillutvikler",
+  "Applikasjonsutvikler",
+  "Tekoälykehittäjä",
+  "Integrationsentwickler SAP PI/PO",
+  "Chefentwickler (m/w/d)",
+  // Word forms
+  "Softvérový inžinier (Java)",
+  "Μηχανικός Δεδομένων",
+  "Ingénieur Sécurité Logicielle H/F",
+  "Ingeniero/a de IA",
+  "Embedded Software Designer",
+  "Linux Kernel Engineer - Remote",
+  "Neural Network Engineer",
 ];
 
 const NOT_DEVELOPER = [
@@ -115,6 +150,45 @@ const NOT_DEVELOPER = [
   "Data Analyst Intern (Python)",
   "Music Programmer",
   "Sviluppatore di prodotti tessili",
+  // Developers of something else, as unlisted compounds or Romance gender forms
+  "Verfahrensentwickler (m/w/d) Chemie",
+  "Rezepturentwickler Lebensmittel (m/w/d)",
+  "Conceptontwikkelaar Retail",
+  "Näringslivsutvecklare",
+  "Erhvervsudvikler",
+  "Hankekehittäjä",
+  "Tananyagfejlesztő (e-learning)",
+  "HR-utvecklare",
+  "Policy Developer",
+  "Learning Developer – Remote",
+  "Solar Developer",
+  "Desarrollador/a de Negocio – Sector Tecnológico",
+  "Sviluppatore/trice Commerciale",
+  "Programador de Produção",
+  // Compound engineers whose stem names another discipline
+  "Entwicklungsingenieur Mobile Arbeitsmaschinen (m/w/d)",
+  "Systemingenieur Plattform (m/w/d)",
+  // Applications, sales, support and data-centre engineers; SAFe roles; IA is Iowa
+  "Field Applications Engineer – Embedded",
+  "Ingénieur d'Applications H/F",
+  "Ingénieur Support Logiciel (H/F)",
+  "Ingeniero/a de Soluciones Cloud (Preventa)",
+  "Data Centre Engineer (Night Shift)",
+  "Ingeniero/a de Centro de Datos",
+  "Release Train Engineer (RTE) – SAFe",
+  "Project Engineer – Ames, IA",
+  "Solutions Engineering Manager, EMEA",
+  // "developer" as the audience
+  "Technical Writer – Developer Documentation (Remote)",
+  "Developer Support Specialist",
+  // Managers and teachers of software work
+  "Product Manager – Developer Tools",
+  "Projektmanager Softwareentwicklung (m/w/d)",
+  "Formateur Développeur Web et Web Mobile (H/F)",
+  "Docente di Sviluppo Web (Full Stack)",
+  "Ausbilder Fachinformatiker Anwendungsentwicklung (m/w/d)",
+  "Software Engineering Instructor – Coding Bootcamp",
+  "Programista obrabiarek sterowanych numerycznie",
 ];
 
 test("developer roles in EU languages", () => {
