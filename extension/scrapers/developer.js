@@ -45,7 +45,16 @@
       "sales developer",
       "sales development",
       "developer marketing",
+      "developer content",
+      "localization engineer",
+      "localisation engineer",
+      "software support",
+      "softwaresupport",
+      "software sales",
+      "softwarevertrieb",
     ]),
+    // Marketing jobs at software companies: "Growth Marketing Manager (AI Software)"
+    pattern("(?:^| )(?:marketing|growth|content|brand|communications?) (?:manager|specialist|lead|director|executive)(?= |$)"),
     // German compounds: Projektentwickler (real estate), Produktentwickler (goods)
     pattern("(?:^| )(?:projekt|immobilien|produkt|geschafts|unternehmens|stadt|regional|kompetenz|team)\\p{L}* developer"),
     // Other engineering disciplines
@@ -73,6 +82,8 @@
       "hardware engineer",
       "pcb",
       "rf engineer",
+      "moulding",
+      "molding",
     ]),
     // Not building software
     pattern(
@@ -129,6 +140,8 @@
       "engineering manager",
       "engineering lead",
       "founding engineer",
+      "forward deployed",
+      "internal tools",
       "staff engineer",
       "principal engineer",
       "fachinformatiker anwendungsentwicklung",
@@ -195,6 +208,11 @@
     "games",
     "computer vision",
     "robotics",
+    "growth",
+    "martech",
+    "tools",
+    "devtools",
+    "backend",
   ]);
 
   function jbIsDeveloperTitle(title) {

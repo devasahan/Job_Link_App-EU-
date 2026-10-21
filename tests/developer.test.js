@@ -32,6 +32,10 @@ const DEVELOPER = [
   "Tech Lead",
   "Founding Engineer",
   "Salesforce Developer",
+  "Internal Tools Engineer",
+  "Forward Deployed Engineer (EMEA)",
+  "Growth Engineer",
+  "Build Tools Engineer",
 ];
 
 const NOT_DEVELOPER = [
@@ -55,6 +59,11 @@ const NOT_DEVELOPER = [
   "Marketing Manager",
   "Developer Marketing Manager",
   "SAP Consultant",
+  "Senior Developer Content Marketing and Communications Specialist",
+  "Growth Marketing Manager (AI Software)",
+  "Freelancer (m/w/d) für den Softwaresupport der Auxilium Communication GmbH",
+  "MT & AI Localization Engineer (MT-Spezialist) (m/w/d)",
+  "Tooling Engineer (Injection Moulding)",
   "",
 ];
 
