@@ -30,6 +30,17 @@ test("developer, engineer and software in EU languages read as the English words
   assert.equal(words("Ingénieur logiciel"), "engineer software");
   assert.equal(words("Ohjelmistokehittäjä"), "software developer");
   assert.equal(words("Μηχανικός Λογισμικού / Προγραμματιστής"), "engineer software developer");
+  // Case and plural endings, and engineer at the end of compounds
+  assert.equal(words("Junior PHP vývojáře"), "junior php developer");
+  assert.equal(words("Programatoare Java"), "developer java");
+  assert.equal(words("Ohjelmoija"), "developer");
+  assert.equal(words("Mjukvaruingenjör"), "software engineer");
+  assert.equal(words("Szoftvermérnök"), "software engineer");
+  assert.equal(words("Dateningenieur (m/w/d)"), "daten engineer m w d");
+  assert.equal(words("Engenheiro de Software"), "engineer de software");
+  // Dotted abbreviations are one word
+  assert.equal(words("Ingénieur(e) I.A F/H"), "engineer e ia f h");
+  assert.equal(words("SDE II"), "software development engineer ii");
 });
 
 test("titles match across languages", () => {
@@ -48,6 +59,7 @@ test("next to another word, developer, engineer and programmer are one role", ()
   assert.ok(matches("Backend Engineer", "Backend Developer"));
   assert.ok(matches("Java Programmer", "Java Developer"));
   assert.ok(matches("Programador Java", "Java Developer"));
+  assert.ok(matches("Mjukvaruingenjör", "Software Engineer"));
   assert.ok(matches("Senior Software Engineer", "Senior Developer"));
   // Only for software roles: seniority words don't make a sales or hardware job one
   assert.equal(matches("Senior Sales Engineer", "Senior Developer"), false);

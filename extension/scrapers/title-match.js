@@ -37,20 +37,25 @@
       .replace(/\p{M}+/gu, "");
   }
 
-  // Developer and engineer in EU languages, also at the end of compounds
-  // ("Softwareentwickler", "Backend-Entwicklerin", "systemutvecklare")
+  // Developer, programmer and engineer in EU languages, also at the end of
+  // compounds ("Softwareentwickler", "Backend-Entwicklerin", "systemutvecklare",
+  // "Mjukvaruingenjör"), with case and plural endings ("vývojáře", "programatoare")
   const ROLE_WORDS = [
     [
-      /(?:entwickler(?:innen|in)?|developpeu(?:r|se)s?|desarrollador(?:a|es|as)?|desenvolvedor(?:a|es|as)?|sviluppat(?:ore|rice|ori)|ontwikkelaars?|programist(?:a|ka|ki|y)|programador(?:a|es|as)?|programmeu(?:r|se)s?|programmat(?:ore|rice|ori)|programmierer(?:innen|in)?|programator(?:ka|zy|i)?|programozo(?:k)?|programmerare|programmerer|programmor(?:er|ene)?|vyvojar(?:ka|i)?|utvecklare|udvikler(?:e)?|utvikler(?:e)?|kehittaja(?:t)?|fejleszto(?:k)?|dezvoltator(?:i)?|προγραμματιστ\p{L}*)(?![\p{L}\p{N}])/gu,
+      /(?:entwickler(?:innen|in)?|developpeu(?:r|se)s?|desarrollador(?:a|es|as)?|desenvolvedor(?:a|es|as)?|sviluppat(?:ore|rice|ori|rici)|ontwikkelaars?|programist(?:a|ka|ki|ow|om|e|y)|programador(?:a|es|as)?|programmeu(?:r|se)s?|programmat(?:ore|rice|ori|rici)|programmierer(?:innen|in)?|programat(?:or(?:k[aeyu]|ul|zy|em|om|ov|um|[aiu])?|oare)|programozo(?:k)?|programmerare|programmerere?|programmor(?:er|ene)?|vyvojar(?:k[aeyu]|ce|em|om|ov|um|[eiu])?|utvecklare|udvikler(?:e)?|utvikler(?:e)?|kehittaja(?:t)?|ohjelmoija(?:t)?|fejleszto(?:k)?|dezvoltat(?:or(?:ul|ii|i)?|oare)|προγραμματιστ\p{L}*)(?![\p{L}\p{N}])/gu,
       " developer",
     ],
+    // German, Nordic, Finnish and Hungarian write engineer as part of a word
+    // ("Dateningenieur", "dataingenjör", "ohjelmistoinsinööri", "szoftvermérnök")
+    [/(?:ingenieur(?:innen|in|e|s)?|ingenjor(?:er)?|ingenior(?:er|en)?|insinoori(?:t)?|mernok(?:ok|ot)?)(?![\p{L}\p{N}])/gu, " engineer"],
     [
-      /(?<![\p{L}\p{N}])(?:ingenieur(?:in|e|s)?|ingeniero|ingegnere|inzynier|ingenjor|ingenior|insinoori|inzenyr|inginer|μηχανικ\p{L}*)(?![\p{L}\p{N}])/gu,
+      /(?<![\p{L}\p{N}])(?:ingenier[oa]s?|ingegner[ei]|inzynier(?:a|owie)?|inzenyr(?:a|ka|i)?|inginer(?:a|ul|i)?|engenheir[oa]s?|μηχανικ\p{L}*)(?![\p{L}\p{N}])/gu,
       "engineer",
     ],
-    // Software ("Ingénieur logiciel", "Inżynier oprogramowania", "Ohjelmistokehittäjä")
+    // Software ("Ingénieur logiciel", "Inżynier oprogramowania", "Ohjelmistokehittäjä",
+    // "mjukvaruutvecklare", "softwarový inženýr")
     [
-      /(?<![\p{L}\p{N}])(?:logiciels?|oprogramowania|ohjelmisto|softwaru|szoftver\p{L}*|programvara|programvare|λογισμικου?)(?![\p{L}\p{N}])/gu,
+      /(?<![\p{L}\p{N}])(?:logiciels?|oprogramowania|ohjelmisto|softwaru|softwarov\p{L}*|(?:sz|s)oftver\p{L}*|programvar[aeu]|mjukvar[au]|λογισμικ(?:ου?|ων|α))(?![\p{L}\p{N}])/gu,
       "software",
     ],
   ];
@@ -79,6 +84,7 @@
     engr: "engineer",
     dev: "developer",
     swe: "software engineer",
+    sde: "software development engineer",
     postgresql: "postgres",
     k8s: "kubernetes",
     springboot: "spring boot",
@@ -88,6 +94,8 @@
     let s = fold(text)
       // ".NET" / "ASP.NET" before punctuation goes ("net" alone is a word)
       .replace(/\.net\b/g, " dotnet")
+      // Dotted abbreviations are one word: "I.A." = "IA", "A.I." = "AI"
+      .replace(/(?<![\p{L}\p{N}.])\p{L}(?:\.\p{L}){1,2}\.?(?![\p{L}\p{N}])/gu, (m) => m.replace(/\./g, ""))
       // "React+Redux" is two words; "C++" stays one
       .replace(/(\p{L})\+(?=\p{L})/gu, "$1 ");
     for (const [re, rep] of ROLE_WORDS) s = s.replace(re, rep);
