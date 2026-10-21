@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "JobBridge EU",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Fetch remote developer jobs open to EU countries from Indeed (EU sites plus UK, Canada and US employers hiring in Europe), then download Excel.",
   "action": {
     "default_popup": "popup.html",
