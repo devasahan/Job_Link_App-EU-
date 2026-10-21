@@ -32,6 +32,7 @@ const DEVELOPER = [
   "CTO",
   "Tech Lead",
   "Founding Engineer",
+  "Member of Technical Staff - Remote",
   "Salesforce Developer",
   "Internal Tools Engineer",
   "Forward Deployed Engineer (EMEA)",

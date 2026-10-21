@@ -532,6 +532,8 @@
       "tech lead",
       "technical lead",
       "founding engineer",
+      // AI and research labs' title for software engineers
+      "member of technical staff",
       "forward deployed",
       "internal tools",
       "staff engineer",

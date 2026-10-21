@@ -250,6 +250,10 @@
   // ...not a skill ("experience hiring engineers in the EU market")
   const SKILL = "(?<!(?:experience|experienced)\\s+(?:(?:in|with)\\s+)?)";
   const STRONG_BEFORE = pattern(`${NB}${SKILL}(?:${HIRE}|${LIVE})(?:\\s+${GAP_WORD}){0,4}?\\s+${IN}`);
+  // ...with a clause inside: "based in, and have the right to work in, an EU member state"
+  const INSERT = `\\s+(?:in|within),(?:\\s+[\\p{L}'-]+){1,8}?\\s+(?:in|within),(?=\\s+(?:${DET})?$)`;
+  const STRONG_INSERT_BEFORE = pattern(`${NB}${SKILL}(?:${HIRE}|${LIVE})${INSERT}\\s+(?:${DET})?$`);
+  const INSERT_RE = pattern(INSERT);
   // "work from Europe", "engineers across Europe" (not "our team members work across Europe")
   const LOOSE_BEFORE = pattern(
     `${NB}${NOT_COMPANY}(?:work|works|working|people|engineers?|developers?)(?:\\s+${GAP_WORD}){0,2}?\\s+${IN}`
@@ -267,7 +271,7 @@
   const BARE_TAG_BEFORE = pattern(`${NB}remote\\s+$`);
   // "registered: UK, Netherlands…", "live in one of our selected markets: Portugal…", "Location: Europe"
   const COLON_BEFORE = pattern(
-    `${NB}(?:${HIRE}|${LIVE}|countries|locations?|regions)(?:\\s+[^\\s:.;!?]+){0,12}?\\s*:\\s*(?:[^\\s.;!?]+\\s+){0,3}?$`
+    `${NB}(?:${HIRE}|${LIVE}|countries|locations?|regions|where\\s+you\\s+(?:can|may|could)\\s+(?:work|live|be\\s+based))(?:\\s+[^\\s:.;!?]+){0,12}?\\s*:\\s*(?:[^\\s.;!?]+\\s+){0,3}?$`
   );
   // "residents of the EU", "nationals of an EU country"
   const OF_BEFORE = pattern(`${NB}(?:residents?|citizens?|nationals?)\\s+of\\s+(?:the\\s+|an?\\s+)?$`);
@@ -309,6 +313,11 @@
     `^[\\s-]*(?:(?:based|resident|residents|citizens?|candidates|applicants|locations?|hires|remote)[\\s-]+)?only${NA}`
   );
   const WIDE_AFTER = pattern(`^[\\s-]*wide${NA}`);
+  // Another option follows, so the home place is one of several: "anywhere in the United States,
+  // or from one of the following European countries…"
+  const OR_ELSE_AFTER = pattern(
+    `^\\s*,?\\s+or\\s+(?:(?:also|alternatively)\\s+)?(?:from|in|within|anywhere|one\\s+of|elsewhere)${NA}`
+  );
   // A perk, not where the job is: "work from anywhere in Europe for up to 4 weeks a year"
   const PERK_AFTER = pattern(
     `^\\s+(?:for\\s+)?(?:up\\s+to\\s+|a\\s+few\\s+|several\\s+)?(?:(?:\\d+|one|two|three|four|five|six|a)\\s*)?(?:days?|weeks?|months?)${NA}`
@@ -489,7 +498,8 @@
       const homeOnly = !europe.length && items.some((p) => p.kind === "home" || p.kind === "state");
       // The last words before the list: a "must" further back is about something else ("you must be
       // comfortable working with a team that is mostly in the US")
-      const near = before.trimEnd().split(" ").slice(-10).join(" ");
+      // (a clause inside, "based in, and legally allowed to work in, the", doesn't push it out)
+      const near = before.replace(INSERT_RE, " in").trimEnd().split(" ").slice(-10).join(" ");
       const restrict = RESTRICT.test(near) || ROLE_AFTER.test(after) || MUST_BE_BEFORE.test(before);
       const tag = TAG_BEFORE.test(before) || REMOTE_AFTER.test(after);
       const bareTag = BARE_TAG_BEFORE.test(before) && (head || /^\s*(?:$|[.,;:!?)\]|])/u.test(after));
@@ -526,7 +536,7 @@
           OF_BEFORE.test(before) ||
           // Who is hired or where they live needs no end to the phrase: a bullet runs into the next
           // one ("Based in the EU 5+ years of Go"); "EU-funded" is no place
-          (STRONG_BEFORE.test(before) && !/^-/u.test(after)) ||
+          ((STRONG_BEFORE.test(before) || STRONG_INSERT_BEFORE.test(before)) && !/^-/u.test(after)) ||
           (follows && (head || piped));
         const loose = !strong && follows && LOOSE_BEFORE.test(before);
         if (!strong && !loose) continue;
@@ -543,7 +553,7 @@
       }
       // Where the hire lives ("based in", "Location:"), not who they work with ("collaboration with
       // engineers in the US")
-      const triggered = STRONG_BEFORE.test(before) || COLON_BEFORE.test(before);
+      const triggered = STRONG_BEFORE.test(before) || STRONG_INSERT_BEFORE.test(before) || COLON_BEFORE.test(before);
       const closes =
         ((tag || bareTag) && !besideEurope(k)) ||
         ANYWHERE_BEFORE.test(before) ||
@@ -554,7 +564,7 @@
         ROLE_AFTER.test(after) ||
         (restrict && (triggered || BASED_AFTER.test(after) || MUST_BE_BEFORE.test(before))) ||
         (field === "title" && (SEGMENT_BEFORE.test(before) || SEGMENT_AFTER.test(after)));
-      if (closes) hits.push({ ...hit, type: "closed" });
+      if (closes && !OR_ELSE_AFTER.test(after)) hits.push({ ...hit, type: "closed" });
     }
   }
 

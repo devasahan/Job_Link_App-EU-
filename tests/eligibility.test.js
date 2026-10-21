@@ -141,6 +141,12 @@ test("company blurbs, travel and passing mentions are not where the job hires", 
   }
 });
 
+test("a home option beside another one still closes when the other is home too", () => {
+  assert.equal(open("This role can be done from anywhere in the United States, or from Canada.").open, false);
+  const both = "You must be based in, and legally allowed to work in, the United States. Remote (Europe) for our EU team.";
+  assert.equal(open(both).open, false);
+});
+
 test("home-country wording closes the job, also against a loose open signal", () => {
   for (const job of [
     { description: "This is a UK based role. You'll work with engineers across Europe." },
@@ -180,6 +186,22 @@ test("home-country wording closes the job, also against a loose open signal", ()
 
 test("more ways postings say they hire in Europe", () => {
   const cases = [
+    // From a blind check: a heading before a list, a clause inside, and a home option beside European ones
+    [
+      { description: "Where you can work: Canada, United Kingdom, Ireland, Germany, the Netherlands and Poland." },
+      EVERY,
+      "Ireland, Germany, The Netherlands, Poland",
+    ],
+    [{ description: "You must be based in, and have the right to work in, an EU member state." }, EVERY, "EU"],
+    [
+      {
+        description:
+          "This position can be filled remotely from anywhere in the United States, or from one of the following " +
+          "European countries where we have an entity: Germany, the Netherlands, Spain and Portugal.",
+      },
+      EVERY,
+      "Germany, The Netherlands, Spain, Portugal",
+    ],
     [{ description: "We are hiring in the UK & ROI." }, countryNames("IE"), "Ireland"],
     [{ description: "Candidates must live in the Republic of Ireland." }, countryNames("IE"), "Ireland"],
     [{ description: "Remote (Holland)" }, countryNames("NL"), "Holland"],
