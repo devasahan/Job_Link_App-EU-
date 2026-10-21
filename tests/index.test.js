@@ -48,7 +48,7 @@ test("a run: countries in popup order, one row per title + company, marketing on
     jobType: "fulltime",
   });
   assert.deepEqual(errors, []);
-  assert.deepEqual(asked, ["AT", "DE"]);
+  assert.deepEqual(asked, ["AT", "AT", "DE", "DE"]);
   // The same job on the Austrian and German sites is one row
   assert.deepEqual(
     jobs.map((j) => `${j.country} ${j.title}`).sort(),

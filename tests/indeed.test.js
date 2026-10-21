@@ -2,6 +2,7 @@ import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import "./helpers/env.js";
 import {
+  FILTER_STYLES,
   INDEED_SITES,
   buildFilters,
   buildQuery,
@@ -62,19 +63,21 @@ test("Indeed sites: 18 EU countries plus Norway, Switzerland and the UK", () => 
   }
 });
 
-test("each country gets its own indeed-co and locale", () => {
+test("each country gets its own indeed-co; labels stay English", () => {
   assert.equal(requestHeaders("DE")["indeed-co"], "DE");
-  assert.equal(requestHeaders("DE")["indeed-locale"], "de-DE");
-  assert.equal(requestHeaders("BE")["indeed-locale"], "nl-BE");
-  assert.equal(requestHeaders("IE")["indeed-locale"], "en-IE");
-  assert.equal(requestHeaders("GB")["indeed-locale"], "en-GB");
+  assert.equal(requestHeaders("GB")["indeed-co"], "GB");
+  assert.equal(requestHeaders("DE")["indeed-locale"], "en-US");
 });
 
 test("filters: date window, remote but not hybrid; no job type", () => {
-  const list = buildFilters("list", { hoursOld: 72 });
+  assert.deepEqual(FILTER_STYLES, ["full", "date", "legacy"]);
   assert.equal(
-    list,
+    buildFilters("full", { hoursOld: 72 }),
     'filters: [{ date: { field: "dateOnIndeed", start: "72h" } }, { keyword: { field: "attributes", keys: ["DSQF7"] } }, { keyword: { field: "attributes", keys: ["PAXZC"], match: MUST_NOT } }]'
+  );
+  assert.equal(
+    buildFilters("date", { hoursOld: 24 }),
+    'filters: [{ date: { field: "dateOnIndeed", start: "24h" } }, { keyword: { field: "attributes", keys: ["DSQF7"] } }]'
   );
   assert.equal(
     buildFilters("legacy", { hoursOld: 24 }),
@@ -89,9 +92,11 @@ test("query escapes the search words", () => {
   assert.doesNotMatch(buildQuery("", null, ""), /what:|cursor:/);
 });
 
-test("search terms: each title, or marketing in English and the local language", () => {
-  assert.deepEqual(searchTerms("", "", "DE"), ["marketing"]);
-  assert.deepEqual(searchTerms("", "HubSpot", "SE"), ["marketing HubSpot", "marknadsföring HubSpot"]);
+test("search terms: each title, or marketing and communications in the local language", () => {
+  assert.deepEqual(searchTerms("", "", "DE"), ["marketing", "Kommunikation"]);
+  assert.deepEqual(searchTerms("", "HubSpot", "SE"), ["marketing HubSpot", "marknadsföring HubSpot", "kommunikation HubSpot"]);
+  // Every country Indeed covers has its own words
+  for (const code of Object.keys(INDEED_SITES)) assert.ok(searchTerms("", "", code).length >= 2, code);
   assert.deepEqual(searchTerms("SEO Manager, Content Marketing", "", "FR"), ["SEO Manager", "Content Marketing"]);
 });
 
@@ -141,7 +146,13 @@ test("scrapeIndeed searches each ticked country with an Indeed site", async () =
     jobType: "fulltime",
     onProgress: (m) => log.push(m),
   });
-  assert.deepEqual(calls.map((c) => c.country), ["DE", "FR"]);
+  // Marketing, then communications, in each country's words; repeats are dropped
+  assert.deepEqual(calls.map((c) => `${c.country} ${c.query.match(/what: "([^"]*)"/)[1]}`), [
+    "DE marketing",
+    "DE Kommunikation",
+    "FR marketing",
+    "FR communication",
+  ]);
   assert.deepEqual(jobs.map((j) => j.job_url), [
     "https://fr.indeed.com/viewjob?jk=fr1",
     "https://de.indeed.com/viewjob?jk=de1",
@@ -155,16 +166,18 @@ test("job type is read from attribute keys; jobs without a type stay", async () 
   mockFetch(() =>
     page([
       rawJob("full", { attributes: [{ key: "DSQF7" }, { key: "CF3CP" }] }),
-      rawJob("freelance", { attributes: [{ key: "DSQF7" }, { key: "T9BXE" }] }),
+      rawJob("freelance", { attributes: [{ key: "DSQF7" }, { key: "T65DZ" }] }),
+      rawJob("fixedterm", { attributes: [{ key: "DSQF7" }, { key: "T9BXE" }] }),
       rawJob("untyped", { attributes: [{ key: "DSQF7" }] }),
       rawJob("intern", { attributes: [{ key: "DSQF7" }, { key: "VDTG7" }] }),
     ])
   );
   const keys = (jobs) => jobs.map((j) => j.job_url.split("jk=")[1]).sort();
   const run = (jobType) => scrapeIndeed({ countries: ["DE"], resultsWanted: 10, datePreset: "today", jobType });
+  // Fixed-term employees count as full time, not as freelancers
   assert.deepEqual(keys(await run("contract")), ["freelance", "untyped"]);
-  assert.deepEqual(keys(await run("fulltime")), ["full", "untyped"]);
-  assert.deepEqual(keys(await run("both")), ["freelance", "full", "untyped"]);
+  assert.deepEqual(keys(await run("fulltime")), ["fixedterm", "full", "untyped"]);
+  assert.deepEqual(keys(await run("both")), ["fixedterm", "freelance", "full", "untyped"]);
   assert.doesNotMatch(calls[0].query, /CF3CP|NJXCK/);
 });
 
@@ -178,20 +191,41 @@ test("scrapeIndeed pages with the cursor and stops at Count", async () => {
   assert.equal(jobs.length, 3);
 });
 
-test("scrapeIndeed falls back to the older filter when the list is rejected", async () => {
+test("scrapeIndeed steps down the filters Indeed rejects, once per run", async () => {
+  const invalid = (msg) => new Response(JSON.stringify({ errors: [{ message: msg, extensions: { code: "GRAPHQL_VALIDATION_FAILED" } }] }), { status: 400 });
   mockFetch((country, call) => {
-    if (/filters: \[\{ date/.test(call.query)) {
-      return { errors: [{ message: 'Unknown argument "filters" of type [JobSearchFilter]' }] };
-    }
-    return page([rawJob("x"), rawJob("old", { dateOnIndeed: Date.now() - 80 * HOUR })]);
+    if (/MUST_NOT/.test(call.query)) return invalid('Field "match" is not defined by type "KeywordFilterInput".');
+    if (/filters: \[\{ date/.test(call.query)) return invalid('Field "date" is not defined by type "JobSearchFilterInput".');
+    return page([
+      rawJob(`${country}x`, { location: { countryCode: country } }),
+      rawJob(`${country}old`, { dateOnIndeed: Date.now() - 80 * HOUR, location: { countryCode: country } }),
+      rawJob(`${country}hybrid`, { attributes: [{ key: "DSQF7" }, { key: "PAXZC" }], location: { countryCode: country } }),
+    ]);
   });
   const log = [];
   const jobs = await scrapeIndeed({ countries: ["DE", "AT"], resultsWanted: 10, datePreset: "today", onProgress: (m) => log.push(m) });
-  assert.match(calls[1].query, /composite: \{ filters: \[\{ keyword/);
-  // AT goes straight to the older filter
-  assert.equal(calls.length, 3);
-  assert.deepEqual(jobs.map((j) => j.job_url), ["https://de.indeed.com/viewjob?jk=x"]);
-  assert.ok(log.some((m) => /falling back/.test(m)));
+  // DE: full → date → legacy, then its second search and AT's two go straight to legacy
+  assert.equal(calls.length, 6);
+  for (const call of calls.slice(2)) assert.match(call.query, /filters: \{ composite: \{ filters: \[\{ keyword/);
+  assert.deepEqual(jobs.map((j) => j.job_url.split("jk=")[1]).sort(), ["ATx", "DEx"]);
+  assert.ok(log.some((m) => /hybrid exclusion/.test(m)));
+  assert.ok(log.some((m) => /date filter/.test(m)));
+});
+
+test("scrapeIndeed skips a country Indeed has no site for, and stops on a refused key", async () => {
+  mockFetch((country) => {
+    if (country === "AT") {
+      return new Response(JSON.stringify({ errors: [{ message: "Request country AT does not correspond to a valid Indeed site." }] }), { status: 400 });
+    }
+    if (country === "BE") return new Response(JSON.stringify({ errors: [{ message: "Unauthorized" }] }), { status: 401 });
+    return page([rawJob(`${country}1`, { location: { countryCode: country } })]);
+  });
+  const log = [];
+  const jobs = await scrapeIndeed({ countries: ["AT", "DE", "BE", "FR"], resultsWanted: 10, datePreset: "today", onProgress: (m) => log.push(m) });
+  assert.deepEqual(calls.map((c) => c.country), ["AT", "DE", "DE", "BE"]);
+  assert.deepEqual(jobs.map((j) => j.country), ["DE"]);
+  assert.ok(log.some((m) => /Austria: Indeed has no site there/.test(m)));
+  assert.ok(log.some((m) => /Belgium: Indeed refused the app key/.test(m)));
 });
 
 test("scrapeIndeed: a blocked request stops the board; other failures skip the country", async () => {
@@ -208,7 +242,7 @@ test("scrapeIndeed: a blocked request stops the board; other failures skip the c
     onProgress: (m) => log.push(m),
   });
   // Austria's error skips Austria; Belgium's 429 stops before France
-  assert.deepEqual(calls.map((c) => c.country), ["AT", "DE", "BE"]);
+  assert.deepEqual(calls.map((c) => c.country), ["AT", "DE", "DE", "BE"]);
   assert.deepEqual(jobs.map((j) => j.country), ["DE"]);
   assert.ok(log.some((m) => /stopped early/.test(m) && /Austria/.test(m) && /Belgium: .*429/.test(m)));
 });

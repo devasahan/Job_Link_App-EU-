@@ -1,7 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import "../extension/scrapers/title-match.js";
 import "../extension/scrapers/marketing.js";
+
+const REAL = JSON.parse(readFileSync(new URL("./fixtures/indeed-titles.json", import.meta.url), "utf8"));
 
 const isMarketing = (t) => globalThis.jbIsMarketingTitle(t);
 
@@ -49,6 +52,31 @@ const MARKETING = [
   "Markedssjef",
   "Markkinointipäällikkö",
   "Υπεύθυνος Μάρκετινγκ",
+  // Press and PR
+  "Attaché(e) de presse",
+  "Leitung Pressestelle (m/w/d)",
+  "Ufficio stampa",
+  "Woordvoerder",
+  "Rzecznik prasowy",
+  "Assessor de imprensa",
+  "Tiedottaja",
+  "Υπεύθυνος Δημοσίων Σχέσεων",
+  // Roles named after developers or engineers, or about engineering audiences
+  "Developer Marketing Manager",
+  "Product Marketing Manager, Developer Tools",
+  "B2B Marketing Manager – Engineering & Construction",
+  "Technical Marketing Engineer",
+  // Newer and tool-named roles
+  "Freelance Meta Ads specialist (coaching, remote)",
+  "SEO / GEO-Texter (m/w/d)",
+  "Senior CRO Strategist",
+  "Creative Strategist",
+  "Programmatic Trader",
+  "Market Research Analyst",
+  "Recruitment Marketing Manager",
+  "Senior Marketing Designer",
+  "Consultant SEA",
+  "Spezialist SEA (m/w/d)",
 ];
 
 const NOT_MARKETING = [
@@ -76,6 +104,27 @@ const NOT_MARKETING = [
   "Kundenberater",
   "Accountant",
   "",
+  // Call centres, sales, teaching, recruiting, design, gigs
+  "Kundenberater Dialogmarketing (m/w/d)",
+  "Teleoperador/a de marketing telefónico",
+  "SDR B2B - Marketing & Acquisition",
+  "Account Executive – Marketing SaaS",
+  "Comercial B2B – Captación y Ventas | Marketing Digital e IA",
+  "Dozent Medien- und Kommunikationsmanagement (m/w/d)",
+  "AI for Content Creation Teaching Expert",
+  "Marketing Recruiter",
+  "Kommunikationsdesigner (m/w/d)",
+  "Graphic Designer",
+  "Marketing Expert - AI Training",
+  "Social Media Moderator",
+  // Look-alike communication, traffic, growth, PR
+  "Wechselprozessmanager Marktkommunikation (m/w/d)",
+  "Mitarbeiter Kundenkommunikation (m/w/d)",
+  "Teknisk kommunikatör",
+  "Transport & Traffic Manager",
+  "Account Growth Manager",
+  "Hostess e PR eventi",
+  "Community Manager - Apartment Homes",
 ];
 
 test("marketing roles in EU languages", () => {
@@ -86,4 +135,9 @@ test("marketing roles in EU languages", () => {
 test("other jobs that share marketing words", () => {
   const wrong = NOT_MARKETING.filter((t) => isMarketing(t));
   assert.deepEqual(wrong, []);
+});
+
+test("real Indeed remote titles", () => {
+  assert.deepEqual(REAL.marketing.filter((t) => !isMarketing(t)), []);
+  assert.deepEqual(REAL.notMarketing.filter((t) => isMarketing(t)), []);
 });

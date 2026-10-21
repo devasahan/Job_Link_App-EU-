@@ -45,6 +45,8 @@ test("years in other EU languages", () => {
     ["3 anos de experiência", 3],
     ["Minst 3 års erfarenhet av marknadsföring", 3],
     ["3 års erfaring med SEO", 3],
+    ["Minst 2 års arbetslivserfarenhet inom SEO", 2],
+    ["Mindst 2 års relevant erhvervserfaring", 2],
     ["Vähintään 3 vuoden kokemus", 3],
     ["Praxe min. 3 roky", 3],
     ["Legalább 3 év tapasztalat", 3],
@@ -52,6 +54,31 @@ test("years in other EU languages", () => {
     ["Τουλάχιστον 3 χρόνια εμπειρία", 3],
     // The highest requirement wins
     ["2 Jahre Berufserfahrung im SEO, idealerweise 4 Jahre Erfahrung im SEA", 4],
+    // Slash ranges use the minimum; brackets
+    ["2/3 anni di esperienza", 2],
+    ["3/5 ans d'expérience", 3],
+    ["Berufserfahrung (mind. 3 Jahre)", 3],
+    ["Erfahrung (3+ Jahre) im Performance Marketing", 3],
+    // Indeed's footer
+    ["Experience: total work: 2 years (Preferred), SEO: 3 years (Required)", 3],
+    ["Berufserfahrung: Online-Marketing: 2 Jahre (Erforderlich)", 2],
+    // Another clause between the years and the experience
+    ["Elternzeitvertretung für 2 Jahre mit Erfahrung im Marketing", null],
+    ["Das Unternehmen ist 10 Jahre alt und sucht Erfahrung", null],
+    // Number words and year adjectives; "between" ranges use the minimum
+    ["two years of experience with HubSpot", 2],
+    ["drei Jahre Erfahrung im Performance Marketing", 3],
+    ["eine mindestens 3-jährige Berufserfahrung", 3],
+    ["dreijährige Berufserfahrung im CRM", 3],
+    ["Trois ans d'expérience minimum", 3],
+    ["Esperienza almeno triennale nel ruolo", 3],
+    ["Dwuletnie doświadczenie w e-mail marketingu", 2],
+    ["Kolmen vuoden kokemus markkinoinnista", 3],
+    ["Työkokemusta vähintään 3 vuotta", 3],
+    ["Διετής εμπειρία στο SEO", 2],
+    ["zwischen 2 und 4 Jahren Berufserfahrung", 2],
+    ["Entre 2 y 4 años de experiencia en paid media", 2],
+    ["Da 2 a 4 anni di esperienza nel digital marketing", 2],
   ]);
 });
 
@@ -62,6 +89,9 @@ test("company history in other languages is not a requirement", () => {
     ["Notre agence a 10 ans d'expérience.", null],
     ["Con más de 20 años de experiencia, somos líderes.", null],
     ["Wir suchen jemanden mit mindestens 3 Jahren Berufserfahrung.", 3],
+    ["Als Agentur mit über 12 Jahren Erfahrung suchen wir dich.", null],
+    ["Forte de 12 ans d'expérience, notre agence accompagne les marques.", null],
+    ["Firma z ponad 12-letnim doświadczeniem na rynku.", null],
   ]);
 });
 
@@ -102,8 +132,40 @@ test("employment types in EU languages", () => {
     ["Ausbildungsleiter Marketing", []],
     ["B2B Marketing Manager", []],
     ["Contract Manager", []],
-    ["CDI", []],
-    ["Permanent", []],
+    ["Stage & Events Marketing Manager", []],
+    ["Pre-IPO stage Growth Lead", []],
+    ["Content Manager (intern)", []],
+    ["Specjalista ds. kontraktacji", []],
+    // Employee jobs, permanent or fixed-term: full time unless they say otherwise
+    ["CDI", ["fulltime"]],
+    ["Permanent", ["fulltime"]],
+    ["Fixed-term", ["fulltime"]],
+    ["Unbefristete Festanstellung", ["fulltime"]],
+    ["Marketing Manager (vast contract)", ["fulltime"]],
+    ["Contract pe perioadă nedeterminată", ["fulltime"]],
+    ["Contract de muncă", ["fulltime"]],
+    ["CDI - temps partiel", ["other"]],
+    ["Fixed-term, Part-time", ["other"]],
+    ["Project contract", ["contract"]],
+    ["Temp agency", ["other"]],
+    ["Πλήρης απασχόληση", ["fulltime"]],
+    ["Festanstellung, Freie Mitarbeit", ["contract", "fulltime"]],
+    ["Specjalista ds. SEO (UoP lub B2B)", ["contract", "fulltime"]],
+    ["Marketing Manager - 12 Month Fixed Term Contract", ["fulltime"]],
+    ["Content Marketing Manager (m/w/d) – Teilzeit möglich", []],
+    ["Performance Marketing Manager (m/w/d) Vollzeit (Teilzeitmodelle möglich)", ["fulltime"]],
+    ["Kommunikationsmanager (m/w/d) intern & extern", []],
+    ["Referent Ausbildungsmarketing (m/w/d)", []],
+    ["Pflichtpraktikum Brand Marketing ab März", ["other"]],
+    ["Volontariat PR & Unternehmenskommunikation", ["other"]],
+    ["Marketing Manager 80-100%", ["fulltime", "other"]],
+    ["Marketing Manager 60%", ["other"]],
+    ["Junior Marketing Manager (m/w/d) – 100 % Homeoffice", []],
+    ["Intérim", ["other"]],
+    ["Directeur Marketing par intérim", ["contract"]],
+    ["Head of Marketing (Interim)", ["contract"]],
+    ["Gestor de Marketing Digital (Recibos Verdes)", ["contract"]],
+    ["Specialist marketing (PFA)", ["contract"]],
   ];
   for (const [text, want] of cases) assert.deepEqual(kinds(text), want, text);
 });
@@ -113,7 +175,18 @@ test("descriptions only count explicit type phrases", () => {
   assert.deepEqual(kinds("Teilzeit ist möglich. Praktikanten betreuen.", desc), []);
   assert.deepEqual(kinds("Anstellung in Vollzeit", desc), ["fulltime"]);
   assert.deepEqual(kinds("Zusammenarbeit auf freiberuflicher Basis", desc), ["contract"]);
+  assert.deepEqual(kinds("Collaborazione in partita IVA", desc), ["contract"]);
+  assert.deepEqual(kinds("This is a contract role for 6 months", desc), ["contract"]);
+  // Company footers, postcodes and passing mentions
   assert.deepEqual(kinds("Du verantwortest unser B2B-Marketing", desc), []);
+  assert.deepEqual(kinds("Acme S.r.l. – Partita IVA 01234567890", desc), []);
+  assert.deepEqual(kinds("Herengracht 1, 1099 AB Amsterdam", desc), []);
+  assert.deepEqual(kinds("You brief our freelancers and contractors", desc), []);
+  assert.deepEqual(kinds("Wir bieten eine unbefristete Festanstellung", desc), ["fulltime"]);
+  // Indeed's footer names the type
+  assert.deepEqual(kinds("Job Types: Part-time. Schedule: Monday to Friday", desc), ["other"]);
+  assert.deepEqual(kinds("Type d'emploi : Freelance / Indépendant", desc), ["contract"]);
+  assert.deepEqual(kinds("Oferujemy: umowa B2B lub umowa o pracę.", desc), ["contract", "fulltime"]);
 });
 
 test("picking a type keeps jobs that never state one", () => {
@@ -124,4 +197,20 @@ test("picking a type keeps jobs that never state one", () => {
   assert.ok(matches(job({ title: "Marketing Manager (Voll- oder Teilzeit)" }), "fulltime"));
   assert.ok(matches(job({ listing_type: "Freelance" }), "contract"));
   assert.ok(!matches(job({ listing_type: "Full-time" }), "contract"));
+});
+
+test("long or repetitive descriptions are read quickly", () => {
+  // Patterns that could split one long word many ways took minutes here
+  const inputs = [
+    "a".repeat(20000) + " 3 jahre " + "b".repeat(20000),
+    ("3 Jahre " + "abcdefghij ".repeat(8) + "x ").repeat(800) + " Erfahrung",
+    ("erfahrung " + "abc ".repeat(4)).repeat(3000) + "3 jahre",
+  ];
+  for (const text of inputs) {
+    const start = performance.now();
+    years(text);
+    kinds(text, { bareContract: false, other: false });
+    kinds(text.slice(0, 5000));
+    assert.ok(performance.now() - start < 2000, `${text.length} characters took too long`);
+  }
 });

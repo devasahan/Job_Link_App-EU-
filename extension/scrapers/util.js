@@ -45,7 +45,8 @@ export function formatLocation(parts) {
  * engine optimisation, …) is in the job title. No title: any marketing role.
  */
 export function titleMatches(jobTitle, title) {
-  if (!String(title || "").trim()) return globalThis.jbIsMarketingTitle(jobTitle);
+  // A title with no usable words ("-", "(m/w/d)") counts as none
+  if (!globalThis.jbTitleQueryPhrases(title).length) return globalThis.jbIsMarketingTitle(jobTitle);
   return globalThis.jbTitleMatches(jobTitle, title);
 }
 

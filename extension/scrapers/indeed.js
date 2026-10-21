@@ -3,12 +3,16 @@
  * header picks the country's Indeed site), remote jobs only: the remote
  * attribute (DSQF7) without the hybrid one (PAXZC), as JobSpy does.
  * The posted-date window is applied on Indeed's side (dateOnIndeed) and again
- * here. If Indeed rejects that filter list, the run falls back to the remote
- * filter alone (the US version's) and the rest is checked here.
+ * here. Indeed's filter list is newer than the US version's single filter, so
+ * when Indeed rejects it the run steps down: without the hybrid exclusion,
+ * then the remote filter alone; whatever Indeed no longer filters is checked
+ * here.
  * The job type is read from attribute keys here, not sent to Indeed: keys in
  * one filter must all be present, contract keys differ by country, and jobs
  * that never state a type stay.
- * Country codes, subdomains and locales follow JobSpy's jobspy/indeed/constant.py.
+ * Country codes and subdomains follow JobSpy's jobspy/indeed/constant.py.
+ * The locale stays en-US everywhere (attribute labels in English), as JobSpy
+ * sent it until Sep 2026 and omkarcloud/indeed-scraper does for every country.
  */
 
 import {
@@ -52,35 +56,13 @@ export const INDEED_SITES = {
   GB: "uk",
 };
 
-// indeed-locale is "<language>-<country>"; countries not listed use English
-const LANGUAGES = {
-  AT: "de",
-  BE: "nl",
-  CH: "de",
-  CZ: "cs",
-  DE: "de",
-  DK: "da",
-  ES: "es",
-  FI: "fi",
-  FR: "fr",
-  GR: "el",
-  HU: "hu",
-  IT: "it",
-  LU: "fr",
-  NL: "nl",
-  NO: "nb",
-  PL: "pl",
-  PT: "pt",
-  RO: "ro",
-  SE: "sv",
-};
-
 const HEADERS = {
   "content-type": "application/json",
   "indeed-api-key":
     "161092c2017b5bbab13edb12461a62d5a833871e7cad6d9d475304573de67ac8",
   accept: "application/json",
   "accept-language": "en-US,en;q=0.9",
+  "indeed-locale": "en-US",
   "indeed-app-info":
     "appv=193.1; appid=com.indeed.jobsearch; osv=16.6.1; os=ios; dtype=phone",
 };
@@ -91,35 +73,57 @@ const COUNTRY_ALIASES = { SL: "SI", UK: "GB", EL: "GR" };
 const REMOTE_KEY = "DSQF7";
 const HYBRID_KEY = "PAXZC";
 // Attribute keys are the same on every Indeed site; their labels are translated
-// (JobSpy constant.py, omkarcloud/indeed-scraper refdata.py)
+// (JobSpy constant.py, omkarcloud/indeed-scraper refdata.py, Indeed Job Sync's
+// job-type table). Written to the sheet and read by employmentKinds():
+// "Permanent" and "Fixed-term" count as full time unless the job says otherwise.
 const TYPE_LABELS = {
   CF3CP: "Full-time",
   NJXCK: "Contract",
-  T9BXE: "Contract",
-  T65DZ: "Contract",
+  T65DZ: "Project contract",
   ZG59D: "Freelance",
   V7KSJ: "Contract",
   "7SBAT": "Contract-to-hire",
   "5QWDV": "Permanent",
+  // Employees on a fixed term (Befristet, CDD), not freelancers
+  T9BXE: "Fixed-term",
+  "4HKF7": "Fixed-term",
+  CJWTS: "Fixed-term",
+  "8YWGX": "Temp agency",
   "75GKK": "Part-time",
   VDTG7: "Internship",
   CPAHG: "Apprenticeship",
-  "4HKF7": "Temporary",
-  CJWTS: "Temporary",
   "9SYVT": "Seasonal",
   TQKYQ: "Per diem",
   UXQZ8: "Volunteer",
 };
 
-// With no Title, boards are searched for marketing; where the local word
-// differs, that word is searched too
+// With no Title, each country is searched for marketing (and its own word
+// for it where that differs) and for its word for communications: Indeed's
+// search reads the posting text, and many PR and communications ads never
+// say "marketing". The title check then keeps the marketing roles.
 const DEFAULT_TERMS = ["marketing"];
 const LOCAL_TERMS = {
-  DK: ["markedsføring"],
-  FI: ["markkinointi"],
-  GR: ["μάρκετινγκ"],
-  NO: ["markedsføring"],
-  SE: ["marknadsföring"],
+  AT: ["Kommunikation"],
+  BE: ["communication", "communicatie"],
+  CH: ["Kommunikation"],
+  CZ: ["komunikace"],
+  DE: ["Kommunikation"],
+  DK: ["markedsføring", "kommunikation"],
+  ES: ["comunicación"],
+  FI: ["markkinointi", "viestintä"],
+  FR: ["communication"],
+  GB: ["communications"],
+  GR: ["μάρκετινγκ", "επικοινωνία"],
+  HU: ["kommunikáció"],
+  IE: ["communications"],
+  IT: ["comunicazione"],
+  LU: ["communication"],
+  NL: ["communicatie"],
+  NO: ["markedsføring", "kommunikasjon"],
+  PL: ["komunikacji"],
+  PT: ["comunicação"],
+  RO: ["comunicare"],
+  SE: ["marknadsföring", "kommunikation"],
 };
 
 const PAGE_PAUSE_MS = 500;
@@ -162,19 +166,20 @@ const keyword = (keys, match = "") =>
   `{ keyword: { field: "attributes", keys: [${keys.map((k) => `"${k}"`).join(", ")}]${match} } }`;
 
 /**
- * "list": date window, remote and not hybrid, all applied by Indeed (a list
- * of filters must all match; JobSpy since Sep 2026).
+ * Filter shapes, tried in this order until Indeed accepts one:
+ * "full": date window, remote, not hybrid (a list of filters must all match;
+ *   JobSpy since Oct 2026);
+ * "date": date window and remote (the hybrid exclusion is the newest part);
  * "legacy": the remote filter alone, the shape the US version used.
  */
+export const FILTER_STYLES = ["full", "date", "legacy"];
+
 export function buildFilters(style, { hoursOld }) {
   if (style === "legacy") {
     return `filters: { composite: { filters: [${keyword([REMOTE_KEY])}] } }`;
   }
-  const filters = [
-    `{ date: { field: "dateOnIndeed", start: "${hoursOld}h" } }`,
-    keyword([REMOTE_KEY]),
-    keyword([HYBRID_KEY], ", match: MUST_NOT"),
-  ];
+  const filters = [`{ date: { field: "dateOnIndeed", start: "${hoursOld}h" } }`, keyword([REMOTE_KEY])];
+  if (style === "full") filters.push(keyword([HYBRID_KEY], ", match: MUST_NOT"));
   return `filters: [${filters.join(", ")}]`;
 }
 
@@ -190,17 +195,13 @@ export function buildQuery(whatTerm, cursor, filters) {
 }
 
 export function requestHeaders(country) {
-  return {
-    ...HEADERS,
-    "indeed-co": country,
-    "indeed-locale": `${LANGUAGES[country] || "en"}-${country}`,
-  };
+  return { ...HEADERS, "indeed-co": country };
 }
 
 /**
  * What to search on one country's Indeed: each comma-separated title (plus
- * the skills, so Indeed checks them on the whole posting), or marketing in
- * English and the local language when there is no title.
+ * the skills, so Indeed checks them on the whole posting), or with no title
+ * marketing and communications in English and the local language.
  */
 export function searchTerms(title, skills, country) {
   const titles = String(title || "")
@@ -258,10 +259,15 @@ export function toJob(raw, country) {
   });
 }
 
-/** Rejected filters (style "list") show up as GraphQL errors without results. */
-const filterRejected = (data) =>
+const INVALID_SITE_RE = /does not correspond to a valid Indeed site/i;
+
+/** A query Indeed refused as invalid (HTTP 400 or 200 with errors and no results). */
+const queryRejected = (res, data) =>
   !data?.data?.jobSearch &&
-  /filter|date|match|argument|syntax|validation/i.test(JSON.stringify(data?.errors || ""));
+  Array.isArray(data?.errors) &&
+  data.errors.length > 0 &&
+  ![401, 403, 429].includes(res.status) &&
+  !INVALID_SITE_RE.test(JSON.stringify(data.errors));
 
 /**
  * @param {{
@@ -302,7 +308,7 @@ export async function scrapeIndeed({
   const failures = [];
   let scanned = 0;
   let elsewhere = 0;
-  let style = "list";
+  let styleIndex = 0;
   let requests = 0;
   // A country's results are newest first; most windows fit in a page or two
   const MAX_PAGES = 5;
@@ -313,7 +319,7 @@ export async function scrapeIndeed({
       // One request at a time: a pause between pages, a longer one between countries
       if (requests++) await sleep(country === lastCountry ? PAGE_PAUSE_MS : COUNTRY_PAUSE_MS);
       lastCountry = country;
-      const filters = buildFilters(style, { hoursOld: preset.hoursOld });
+      const filters = buildFilters(FILTER_STYLES[styleIndex], { hoursOld: preset.hoursOld });
       const res = await fetch(API_URL, {
         method: "POST",
         headers: requestHeaders(country),
@@ -324,10 +330,17 @@ export async function scrapeIndeed({
       return { res, data: await readJson(res, "indeed", "Indeed") };
     };
     let { res, data } = await post();
-    if (style === "list" && filterRejected(data)) {
-      onProgress?.("Indeed rejected the date filter: falling back to the remote filter only");
-      style = "legacy";
+    while (styleIndex < FILTER_STYLES.length - 1 && queryRejected(res, data)) {
+      styleIndex += 1;
+      onProgress?.(
+        FILTER_STYLES[styleIndex] === "date"
+          ? "Indeed rejected the hybrid exclusion: hybrid jobs are left out here instead"
+          : "Indeed rejected the date filter: searching remote jobs and checking dates here"
+      );
       ({ res, data } = await post());
+    }
+    if (res.status === 401) {
+      throw new Error("Indeed refused the app key (HTTP 401): Indeed may have revoked it, so the extension needs an update");
     }
     if (!res.ok) {
       throw new Error(`Indeed HTTP ${res.status}: ${data?.errors?.[0]?.message || "request rejected"}`);
@@ -352,13 +365,13 @@ export async function scrapeIndeed({
         try {
           search = await fetchPage(country, term, cursor);
         } catch (err) {
-          const msg = /does not correspond to a valid Indeed site/i.test(err?.message)
+          const msg = INVALID_SITE_RE.test(err?.message)
             ? "Indeed has no site there"
             : err?.message || String(err);
           failures.push(`${name}: ${msg}`);
           matched.push(...countryMatched);
-          // Blocked or rate-limited: the next countries would be refused too
-          if (/\b(?:403|429)\b/.test(msg)) break countries;
+          // Key refused, blocked or rate-limited: the next countries would be refused too
+          if (/\b(?:401|403|429)\b/.test(msg)) break countries;
           continue countries;
         }
         const results = search.results || [];
@@ -404,7 +417,7 @@ export async function scrapeIndeed({
 
   if (!matched.length && failures.length) {
     // Nothing found and something failed: the board failed
-    if (failures.length === targets.length || /\b(?:403|429)\b/.test(failures[0])) {
+    if (failures.length === targets.length || /\b(?:401|403|429)\b/.test(failures[0])) {
       throw new Error(failures[0].replace(/^[^:]+: /, ""));
     }
   }
