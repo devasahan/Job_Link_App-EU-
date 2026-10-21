@@ -9,22 +9,29 @@
  * ("Zap Solutions Europe"). Each place a posting names (Europe, EMEA, a
  * country, a list of them) is read with the words around it:
  *   - strong open: "Remote (Europe)", "EU/UK Based", "candidates based in the
- *     UK, Germany or Spain", "must reside in Ireland or the UK", a region in
- *     the title or location field, "anywhere in the world", an employer of
- *     record or "candidates outside the US";
+ *     UK, Germany or Spain", "must reside in Ireland or the UK", "we can't
+ *     hire outside the EU", a region in the title or location field,
+ *     "anywhere in the world", an employer of record or "candidates outside
+ *     the US";
  *   - loose open: a region after work / people / engineers / developers
  *     ("you'll collaborate with engineers in Europe"), often a company blurb;
  *     with the employer as the subject it is no signal ("our team members
  *     work across Europe", "our servers are located in the EU");
  *   - weak open: European time zones ("CET", "UTC-3 to UTC+3", "GMT +/- 3
  *     hours"); "work from anywhere" or "staff in 40+ countries" alone;
- *   - strong closed: "US only", "must live in Canada", "Remote (US)",
- *     "anywhere in the United States", "Canada-wide", "not open to other
- *     countries", "This role will be remote and based in the United States";
+ *   - strong closed: "US only", "must live in Canada", "Remote (US)" (unless
+ *     joined to "or Remote (Europe)"), "anywhere in the United States",
+ *     "Canada-wide", "not open to other countries", "we don't hire outside
+ *     the US", "not open to candidates in the EU", "This role will be remote
+ *     and based in the United States";
  *   - weak closed: "authorized to work in the US", W2 / 1099 / C2C, US or UK
  *     hours (written for the home half of a mixed hire);
  *   - citizenship, green card, security clearance or ITAR close the job
- *     whatever else it says.
+ *     whatever else it says (not "green card sponsorship" or "public trust
+ *     in elections").
+ * A third person, a thing or a blurb as the subject is no signal ("our VP,
+ * who is based in Germany", "trips outside the US", "a team of 120 people
+ * across…", "best places to work in Europe").
  * Strong open beats weak closed; against strong closed it is open only from
  * the title or location field. Loose open and time zones are open unless a
  * closed signal is there too. "Anywhere" alone, and no signal, are closed:
@@ -174,6 +181,8 @@
       byName,
       // "Belfast, Northern Ireland" is not Ireland; "EU countries" is the EU
       re: pattern(`${NB}(?<!northern\\s)(${keys})(?:\\s+(?:countries|country|nations|region|area))?${NA}`, "g"),
+      // After "…can't hire outside": a place, or one named before ("outside of these regions")
+      outsideNext: pattern(`^\\s+(?:of\\s+)?(?:the\\s+)?(?:${keys}|these|those|this|that|such)${NA}`),
     };
     return vocab;
   }
@@ -215,22 +224,32 @@
   // ---- Words around a place or a list of places ----
 
   // Who is hired, before "in / from / within / across <places>" (a person:
-  // "as an employee in Germany"; "our employees in Europe" is a blurb)
+  // "as an employee in Germany"; "our employees in Europe" is a blurb).
+  // "Anyone" only with where they live ("anyone who lives in the EU") or as
+  // the subject ("Anyone in Europe can apply", not "care for everyone in the
+  // world"); "applications" only when welcomed (not "deploying applications
+  // across Europe")
   const HIRE =
-    "candidates?|applicants?|hire|hires|hiring|recruit(?:s|ing)?|employee|contractor|anyone|everyone|(?:open|available)\\s+to(?:\\s+(?:those|anyone|everyone|people|residents|individuals))?";
-  // Where they live, unless the employer or a thing is the subject ("our team
-  // is based in Europe", "our servers are located in the EU")
+    "candidates?|applicants?|hire|hires|hiring|employ|employs|recruit(?:s|ing)?|employee|contractors?|freelancers?|(?:anyone|everyone|someone|those)(?=\\s+(?:who|that|currently|based|located|living|residing))|(?<!\\p{L}\\s)(?:anyone|everyone)(?=\\s+(?:in|from|within|across))|(?:welcomes?|welcoming|accepts?|accepting|considers?|considering|invites?|encourages?)\\s+applications|(?:open|available)\\s+to(?:\\s+(?:those|anyone|everyone|people|residents|individuals))?";
+  // Where they live, unless the employer, a thing or a third person is the
+  // subject ("our team is based in Europe", "our servers are located in the
+  // EU", "our VP, who is based in Germany", "banks and insurers based in the
+  // UK"), or it's a blurb ("a team of 120 people across…", "we have engineers
+  // across…", "experience working across…", "best places to work in…")
   const COMPANY =
-    "teams?|employees|staff|colleagues|people|members|engineers|developers|offices?|headquarters|hq|we|we're|our|it|customers|clients|users|company|business|operations|partners|founders|investors|servers|data|infrastructure|entity|subsidiary";
-  const NOT_COMPANY = `(?<!(?:${COMPANY})(?:\\s+(?:are|is|were|all|mostly|currently|who\\s+are))*\\s+)`;
+    "teams?|employees|staff|colleagues|people|members|engineers|developers|offices?|headquarters|hq|we|we're|our|it|customers|clients|users|company|business|operations|partners|founders|investors|servers|data|infrastructure|entity|subsidiary|who|which|that|have|has|experience|\\d+\\+?|\\p{L}+(?:ers|ors|ies|ces|tres)";
+  const NOT_COMPANY = `(?<!${NB}(?:${COMPANY})(?:\\s+(?:are|is|were|all|mostly|currently|who\\s+are|to))*\\s+)`;
   const LIVE = `${NOT_COMPANY}(?:based|located|living|residing|reside|resides|resident|residents|live|lives|domiciled)`;
   // "in the EU", "in an EU country", "in one of the EU countries"
   const DET = "(?:the|an?|any|(?:one|any)\\s+of\\s+(?:the|our))\\s+";
-  const IN = `(?:in|from|within|across|throughout)\\s+(?:${DET})?$`;
+  const IN = `(?:in|from|within|across|throughout|all\\s+over)\\s+(?:${DET})?$`;
   // Up to 4 words between ("candidates currently based in", "based and eligible to work within"),
-  // not a past or a market ("candidates who have worked in Germany")
-  const GAP_WORD = "(?!(?:worked|lived|studied|experience|experienced|expertise|sold|selling|serve|serving|expand|expanding|launch|launching|operate|operating|grow|growing|clients?|customers?|markets?)(?![\\p{L}\\p{N}]))[\\p{L}'-]+";
-  const STRONG_BEFORE = pattern(`${NB}(?:${HIRE}|${LIVE})(?:\\s+${GAP_WORD}){0,4}?\\s+${IN}`);
+  // not a past, a market or praise ("candidates who have worked in Germany", "hire the best people in the world")
+  const GAP_WORD =
+    "(?!(?:worked|lived|studied|experience|experienced|expertise|sold|selling|serve|serving|expand|expanding|launch|launching|operate|operating|grow|growing|clients?|customers?|markets?|best|top|most|brightest|finest|greatest|smartest|strongest|leading)(?![\\p{L}\\p{N}]))[\\p{L}'-]+";
+  // ...not a skill ("experience hiring engineers in the EU market")
+  const SKILL = "(?<!(?:experience|experienced)\\s+(?:(?:in|with)\\s+)?)";
+  const STRONG_BEFORE = pattern(`${NB}${SKILL}(?:${HIRE}|${LIVE})(?:\\s+${GAP_WORD}){0,4}?\\s+${IN}`);
   // "work from Europe", "engineers across Europe" (not "our team members work across Europe")
   const LOOSE_BEFORE = pattern(
     `${NB}${NOT_COMPANY}(?:work|works|working|people|engineers?|developers?)(?:\\s+${GAP_WORD}){0,2}?\\s+${IN}`
@@ -253,8 +272,22 @@
   // "residents of the EU", "nationals of an EU country"
   const OF_BEFORE = pattern(`${NB}(?:residents?|citizens?|nationals?)\\s+of\\s+(?:the\\s+|an?\\s+)?$`);
   const OPEN_TO_BEFORE = pattern(`${NB}(?:open|available|limited|restricted)\\s+(?:only\\s+)?to\\s+(?:the\\s+)?$`);
-  const OUTSIDE_BEFORE = pattern(`${NB}outside\\s+(?:of\\s+)?(?:the\\s+)?$`);
-  const NOT_BEFORE = words("not|n't|unable|cannot|never|no");
+  // The hire outside a place ("candidates based outside the US", "we can't hire outside the US", "if
+  // you're outside the US"), not things or a blurb ("trips outside the US", "customers outside the US",
+  // "our app helps people outside the US")
+  const OUTSIDE_BEFORE = pattern(
+    `${NB}(?:${HIRE}|${LIVE}|you're|you\\s+are)(?:\\s+${GAP_WORD}){0,2}?\\s+outside\\s+(?:of\\s+)?(?:the\\s+)?$`
+  );
+  // "n't" has a letter before it
+  const NOT = `(?:${NB}(?:not|unable|cannot|never|no)|n't)${NA}`;
+  // "we don't currently hire outside the", "we are unable to employ people located outside the"
+  const NOT_OUTSIDE_BEFORE = pattern(`${NOT}(?:\\s+${GAP_WORD}){0,6}?\\s+outside\\s+(?:of\\s+)?(?:the\\s+)?$`);
+  // "candidates outside the US are not eligible"
+  const NOT_AFTER = pattern(`^\\s*,?\\s*(?:(?:are|is|will|would|can|may|could)\\s+)?(?:not|cannot|never|ineligible|\\p{L}+n't)${NA}`);
+  // "not open to candidates in the EU", "we don't hire in Europe", "not able to hire candidates located in"
+  const NOT_HIRE_BEFORE = pattern(
+    `${NOT}(?:\\s+(?:be|currently|yet|able|to)){0,3}\\s+(?:open|available|hire|hiring|employ|employing|consider|considering|accept|accepting|recruit|recruiting)(?:\\s+${GAP_WORD}){0,4}?\\s+${IN}`
+  );
   const AUTH_BEFORE = pattern(
     `${NB}(?:authori[sz]ed|authori[sz]ation|eligible|eligibility|legally\\s+(?:able|permitted|allowed|entitled)|right|rights|permission|permitted|entitled|allowed)\\s+to\\s+(?:live\\s+and\\s+)?work\\s+(?:in|for|within|from)\\s+(?:the\\s+)?$`
   );
@@ -280,6 +313,10 @@
   const PERK_AFTER = pattern(
     `^\\s+(?:for\\s+)?(?:up\\s+to\\s+|a\\s+few\\s+|several\\s+)?(?:(?:\\d+|one|two|three|four|five|six|a)\\s*)?(?:days?|weeks?|months?)${NA}`
   );
+  // ...also written before it: "four weeks a year to work from anywhere in the world"
+  const PERK_BEFORE = pattern(
+    `${NB}(?:\\d+|one|two|three|four|five|six|eight|a\\s+few|several)\\s+(?:days?|weeks?|months?)\\s+(?:a|per|each|every)\\s+year(?:\\s+${GAP_WORD}){0,5}?\\s+${IN}`
+  );
   // "EU residents", "European candidates", "US residents"
   const PEOPLE_AFTER = pattern(`^\\s+(?:residents|citizens|nationals|candidates|applicants|talent|hires)${NA}`);
   // "valid EU work permit", "UK right to work"
@@ -292,32 +329,49 @@
   const FOLLOW = pattern(
     `^(?:\\s*(?:$|[.,;:!?()\\[\\]|/&+"'])|\\s+-|\\s+(?:and|or|but|nor|so|as|at|by|for|from|in|into|of|on|to|with|within|without|through|via|during|after|before|than|plus|including|except|who|whom|whose|that|which|where|when|while|if|unless|until|only|preferred|preferably|ideally|currently|also|too|now|today|is|are|was|were|be|will|would|can|could|may|might|must|should|you|we|they|it|this|these|those|the|a|an|our|your|their|its|please|apply|region|area|zone|remote|remotely|full|fully|based|candidates|residents|applicants|citizens|nationals|talent)${NA})`
   );
-  // Between two places of one list: ", ", " or the ", ", and ", " / ", " (", " + "
-  const LIST_GAP = /^[\s,/|&+;()]*(?:(?:and\/or|and|or|plus|as well as)\s+)?(?:(?:in|from)\s+)?(?:the\s+)?$/u;
+  // Between a home tag and a European one: ") or Remote (", " (remote) / "
+  const ALT_TAG_GAP = pattern(
+    `^\\s*(?:[(\\[]\\s*remote\\s*[)\\]]|[)\\]])?\\s*[,/|;]?\\s*(?:(?:or|and|&)\\s+)?(?:remote(?:ly)?\\s*[(\\[,:/|-]?\\s*(?:(?:in|within|from|across)\\s+)?(?:the\\s+)?)?$`
+  );
+  // Between two places of one list: ", ", " or the ", ", and ", " / ", " (", " + ",
+  // " or an / any other / another ", " or within the ", " or elsewhere in the "
+  const LIST_GAP =
+    /^[\s,/|&+;()]*(?:(?:and\/or|and|or|plus|as well as)\s+)?(?:(?:elsewhere|anywhere(?:\s+else)?)\s+)?(?:(?:in|from|within|across)\s+)?(?:(?:any|one)\s+of\s+)?(?:(?:the|an?|any|another|other)\s+){0,2}$/u;
 
   // ---- Signals that aren't a place ----
 
-  // Nothing reopens these
+  // Nothing reopens these: what the hire must hold or be ("Public Trust clearance", "subject to export
+  // controls"), not the product or a perk ("public trust in elections", "green card sponsorship")
   const ABSOLUTE_RE = words(
-    "(?:usa|united\\s+states|american|canadian|uk|british)\\s+citizen(?:s|ship)?|citizen(?:s|ship)?\\s+of\\s+(?:the\\s+)?(?:usa|united\\s+states|canada|uk|united\\s+kingdom)|green\\s+card|permanent\\s+residen(?:t|ts|ce|cy)\\s+(?:of|in)\\s+(?:the\\s+)?(?:usa|united\\s+states|canada|uk|united\\s+kingdom)|(?:usa|canadian)\\s+permanent\\s+residen(?:t|ts|ce|cy)|public\\s+trust|security\\s+clearance|(?:secret|top\\s+secret|ts|ts\\s*/\\s*sci|sc|dv|nv1|nv2|baseline)\\s+(?:security\\s+)?(?:clearance|cleared)|ts\\s*/\\s*sci|security\\s+check\\s+\\(sc\\)|developed\\s+vetting|reliability\\s+status|bpss|nppv\\d?|itar|ear99|export[\\s-]+control(?:s|led)?|usa\\s+persons?"
+    "(?:usa|united\\s+states|american|canadian|uk|british)\\s+citizen(?:s|ship)?|citizen(?:s|ship)?\\s+of\\s+(?:the\\s+)?(?:usa|united\\s+states|canada|uk|united\\s+kingdom)|green\\s+card(?!\\s+(?:sponsorship|sponsor|sponsors|sponsoring|process|processes|applications?|support))|permanent\\s+residen(?:t|ts|ce|cy)\\s+(?:of|in)\\s+(?:the\\s+)?(?:usa|united\\s+states|canada|uk|united\\s+kingdom)|(?:usa|canadian)\\s+permanent\\s+residen(?:t|ts|ce|cy)|public\\s+trust\\s+(?:clearance|position|background|investigation|eligibility|suitability)|(?:obtain|hold|maintain|pass|active|current)\\s+(?:an?\\s+|the\\s+)?public\\s+trust|security\\s+clearance|(?:secret|top\\s+secret|ts|ts\\s*/\\s*sci|sc|dv|nv1|nv2|baseline)\\s+(?:security\\s+)?(?:clearance|cleared)|ts\\s*/\\s*sci|security\\s+check\\s+\\(sc\\)|developed\\s+vetting|reliability\\s+status|bpss|nppv\\d?|itar|ear99|export[\\s-]+controlled|(?:subject\\s+to|comply\\s+with|compliance\\s+with|pursuant\\s+to|governed\\s+by|under)\\s+(?:(?:the|all|applicable|usa|united\\s+states|federal)\\s+){0,3}export[\\s-]+controls?|usa\\s+persons?"
   );
+  // "…can't hire outside" + a place is read with the place's list (placeLists), "…outside of these
+  // regions" with the list it points back to
   const NO_ABROAD_RE = words(
-    "(?:reside|resides|residing|located|based|live|living)\\s+(?:within|in)\\s+the\\s+country\\s+of\\s+the\\s+(?:advertised\\s+)?(?:role|position|job|posting|vacancy)|not\\s+(?:open|available)\\s+to\\s+(?:(?:candidates|applicants)\\s+(?:in|from)\\s+)?(?:other\\s+countries|international|(?:candidates|applicants|those|anyone)\\s+outside)|(?:unable|not\\s+able|cannot|can't|can\\s+not|do\\s+not|don't|won't|will\\s+not)\\s+(?:to\\s+)?(?:hire|employ|consider|accept|engage)\\s+(?:(?:candidates|applicants|anyone|people|talent)\\s+)?(?:(?:based|located|residing|living)\\s+)?(?:from\\s+)?outside|(?:eligible|approved|following|listed)\\s+(?:usa\\s+)?states"
+    "(?:reside|resides|residing|located|based|live|living)\\s+(?:within|in)\\s+the\\s+country\\s+of\\s+the\\s+(?:advertised\\s+)?(?:role|position|job|posting|vacancy)|not\\s+(?:open|available)\\s+to\\s+(?:(?:candidates|applicants)\\s+(?:in|from)\\s+)?(?:other\\s+countries|international|(?:candidates|applicants|those|anyone)\\s+outside)|(?:unable|not\\s+able|cannot|can't|can\\s+not|do\\s+not|don't|won't|will\\s+not)\\s+(?:to\\s+)?(?:hire|employ|consider|accept|engage)\\s+(?:(?:candidates|applicants|anyone|people|talent)\\s+)?(?:(?:based|located|residing|living)\\s+)?(?:from\\s+)?outside|(?:eligible|approved|following|listed)\\s+(?:usa\\s+)?states",
+    "g"
   );
   const WORLD_RE = words(
-    "location[\\s-]+(?:independent|agnostic)|(?:your\\s+)?location\\s+is\\s+not\\s+a\\s+(?:requirement|restriction|barrier)|(?:hire|hires|hiring|recruit|recruits|recruiting)\\s+(?:(?:talent|people|engineers|developers)\\s+)?globally|open\\s+to\\s+international\\s+(?:candidates|applicants|talent)|international\\s+(?:candidates|applicants)\\s+(?:are\\s+)?(?:welcome|encouraged|considered)|(?:contractors?|freelancers?|contract)\\s+(?:basis\\s+)?worldwide|worldwide\\s+(?:contractors?|contract)"
+    "location[\\s-]+(?:independent|agnostic)|(?:your\\s+)?location\\s+is\\s+not\\s+a\\s+(?:requirement|restriction|barrier)|(?:hire|hires|hiring|recruit|recruits|recruiting)\\s+(?:(?:talent|people|engineers|developers)\\s+)?(?:globally|wherever\\s+(?:you|they)\\s+(?:are|live|reside))|open\\s+to\\s+international\\s+(?:candidates|applicants|talent)|international\\s+(?:candidates|applicants)\\s+(?:are\\s+)?(?:welcome|encouraged|considered)|(?:contractors?|freelancers?|contract)\\s+(?:basis\\s+)?worldwide|worldwide\\s+(?:contractors?|contract)"
   );
-  // How a job abroad is held: an employer of record ("employed through Oyster")
+  // How a job abroad is held: an employer of record ("employed through Oyster", "hired via a local
+  // EOR"), not what the employer sells ("Acme is the leading employer of record platform")
   const EOR_RE = words(
-    "employer\\s+of\\s+record|eor|(?:through|via|with|using|by)\\s+(?:our\\s+|an?\\s+|the\\s+)?(?:partner\\s+|provider\\s+)?(?:deel|remote\\.com|oyster(?:\\s+hr)?|velocity\\s+global|papaya\\s+global|omnipresent|multiplier|globalization\\s+partners|g-p|rippling)|non-usa\\s+(?:employees|candidates|hires|residents|applicants|staff|team\\s+members)"
+    "(?:through|via|using|uses?|with|by|as)\\s+(?:(?:our|an?|the|local|third[\\s-]party|partner)\\s+){0,3}(?:employers?\\s+of\\s+record|eor)(?!\\s+(?:platform|platforms|software|services|solutions?|products?|industry|market|space))|(?:through|via|with|using|by)\\s+(?:our\\s+|an?\\s+|the\\s+)?(?:partner\\s+|provider\\s+)?(?:deel|remote\\.com|oyster(?:\\s+hr)?|velocity\\s+global|papaya\\s+global|omnipresent|multiplier|globalization\\s+partners|g-p|rippling)|non-usa\\s+(?:employees|candidates|hires|residents|applicants|staff|team\\s+members)"
   );
   // Not where it hires: "work from anywhere" (often anywhere in the US), "customers in 120 countries"
   const ANY_RE = words(
     "anywhere(?!\\s+(?:in|within|across|throughout|between|from\\s+\\d))|(?:globally|fully)\\s+distributed|distributed\\s+(?:team|company|workforce)|(?:in|across|from)\\s+(?:over\\s+|more\\s+than\\s+)?\\d+\\+?\\s+countries|around\\s+the\\s+(?:world|globe)"
   );
   const FORMS_RE = words("w-?2|1099|c2c|corp[\\s-]+to[\\s-]+corp");
-  const HOME_TZ_RE = words(
-    "(?:eastern|central|mountain|pacific|atlantic)\\s+(?:standard\\s+|daylight\\s+)?(?:time|hours)|(?:est|edt|cst|cdt|mst|mdt|pst|pdt|et|ct|mt|pt)\\s+(?:business\\s+|working\\s+|work\\s+)?(?:hours|time\\s*zones?|timezones?)|(?:usa|north\\s+american|canadian|uk|british)\\s+(?:business\\s+|working\\s+|work\\s+|office\\s+)?(?:hours|time\\s*zones?|timezones?)"
+  const HOME_TZ =
+    "(?:eastern|central|mountain|pacific|atlantic)\\s+(?:standard\\s+|daylight\\s+)?(?:time|hours)|(?:est|edt|cst|cdt|mst|mdt|pst|pdt|et|ct|mt|pt)\\s+(?:business\\s+|working\\s+|work\\s+)?(?:hours|time\\s*zones?|timezones?)|(?:usa|north\\s+american|canadian|uk|british)\\s+(?:business\\s+|working\\s+|work\\s+|office\\s+)?(?:hours|time\\s*zones?|timezones?)";
+  const HOME_TZ_RE = words(HOME_TZ);
+  // An offset that spells out home hours is home time: "UK hours (9am-5:30pm, UTC+0 in winter…)"
+  const HOME_TZ_BEFORE = pattern(`${NB}(?:${HOME_TZ})${NA}\\s*[(\\[][^()\\[\\]]{0,60}$`);
+  // Where the employer's own team is, not who it hires: "a team spread from PST to CET"
+  const SPREAD_BEFORE = pattern(
+    `${NB}(?:teams?|team\\s+members|we|we're|we\\s+are|colleagues|employees|staff)(?:\\s+(?:is|are|all))?\\s+(?:spread|spans?|spanning|distributed)${NA}`
   );
 
   // ---- Time zones (standard offsets: Western 0, Central 1, Eastern European 2) ----
@@ -357,6 +411,7 @@
   function timeZones(text, field, hits) {
     const add = (m, lo, hi) => {
       const before = sentenceBefore(text, m.index);
+      if (HOME_TZ_BEFORE.test(before) || SPREAD_BEFORE.test(before)) return;
       hits.push({
         type: "tz",
         field,
@@ -404,26 +459,38 @@
     const { re, byName } = places();
     const head = field !== "description";
     const found = [...text.matchAll(re)];
+    // One list: places joined by ", ", " or ", " / "…
+    const lists = [];
     for (let i = 0; i < found.length; ) {
-      // One list: places joined by ", ", " or ", " / "…
       let j = i + 1;
       while (j < found.length && LIST_GAP.test(text.slice(found[j - 1].index + found[j - 1][0].length, found[j].index))) j++;
-      const list = found.slice(i, j);
+      const last = found[j - 1];
+      const items = found.slice(i, j).map((m) => ({ key: m[1], ...byName.get(m[1]) }));
+      lists.push({ start: found[i].index, end: last.index + last[0].length, items });
       i = j;
-      const start = list[0].index;
-      const last = list[list.length - 1];
-      const end = last.index + last[0].length;
-      const items = list.map((m) => ({ key: m[1], ...byName.get(m[1]) }));
-      const piped = list.length > 1 && /[|/+]/u.test(text.slice(start, end));
+    }
+    // "Remote (US/Canada) or Remote (Europe)": a home tag joined to a European one is the other half of the hire
+    const isEurope = (list) => list.items.some((p) => EUROPE_KINDS.has(p.kind));
+    const joined = (a, b) => a && b && b.start - a.end < 40 && ALT_TAG_GAP.test(text.slice(a.end, b.start));
+    const besideEurope = (k) =>
+      (joined(lists[k - 1], lists[k]) && isEurope(lists[k - 1])) || (joined(lists[k], lists[k + 1]) && isEurope(lists[k + 1]));
+
+    for (let k = 0; k < lists.length; k++) {
+      const { start, end } = lists[k];
+      const items = [...lists[k].items];
+      const piped = items.length > 1 && /[|/+]/u.test(text.slice(start, end));
       const before = sentenceBefore(text, start);
       const after = text.slice(end, end + 60);
       if (TZ_AFTER.test(after)) continue;
       // "European" names people only: "European candidates" (not "European markets")
       if (items[items.length - 1].key === "european" && !PEOPLE_AFTER.test(after)) items.pop();
-      if (!items.length || BASED_COMPANY_AFTER.test(after) || PERK_AFTER.test(after)) continue;
+      if (!items.length || BASED_COMPANY_AFTER.test(after) || PERK_AFTER.test(after) || PERK_BEFORE.test(before)) continue;
       const europe = items.filter((p) => EUROPE_KINDS.has(p.kind));
       const homeOnly = !europe.length && items.some((p) => p.kind === "home" || p.kind === "state");
-      const restrict = RESTRICT.test(before) || ROLE_AFTER.test(after) || MUST_BE_BEFORE.test(before);
+      // The last words before the list: a "must" further back is about something else ("you must be
+      // comfortable working with a team that is mostly in the US")
+      const near = before.trimEnd().split(" ").slice(-10).join(" ");
+      const restrict = RESTRICT.test(near) || ROLE_AFTER.test(after) || MUST_BE_BEFORE.test(before);
       const tag = TAG_BEFORE.test(before) || REMOTE_AFTER.test(after);
       const bareTag = BARE_TAG_BEFORE.test(before) && (head || /^\s*(?:$|[.,;:!?)\]|])/u.test(after));
       const follows = FOLLOW.test(after);
@@ -434,14 +501,18 @@
       const hit = { field, text: what };
 
       if (OUTSIDE_BEFORE.test(before)) {
-        // "candidates outside the US" are hired elsewhere; "unable to hire outside the US" are not
-        if (homeOnly) {
-          if (NOT_BEFORE.test(before)) hits.push({ ...hit, type: "closed" });
-          else hits.push({ ...hit, type: "strong", scope: null, label: "Worldwide" });
-        }
+        // "candidates outside the US" are hired elsewhere; "we can't hire outside the US" are not, and
+        // "we can't hire outside the EU" hire in the EU only
+        const not = NOT_OUTSIDE_BEFORE.test(before) || NOT_AFTER.test(after);
+        if (homeOnly) hits.push(not ? { ...hit, type: "closed" } : { ...hit, type: "strong", scope: null, label: "Worldwide" });
+        else if (europe.length && not) hits.push({ ...hit, type: "strong", req: true, ...scopeOf(europe) });
         continue;
       }
       if (europe.length) {
+        if (NOT_HIRE_BEFORE.test(before)) {
+          hits.push({ ...hit, type: "closed" });
+          continue;
+        }
         const strong =
           tag ||
           bareTag ||
@@ -453,7 +524,10 @@
           MUST_BE_BEFORE.test(before) ||
           COLON_BEFORE.test(before) ||
           OF_BEFORE.test(before) ||
-          (follows && (STRONG_BEFORE.test(before) || head || piped));
+          // Who is hired or where they live needs no end to the phrase: a bullet runs into the next
+          // one ("Based in the EU 5+ years of Go"); "EU-funded" is no place
+          (STRONG_BEFORE.test(before) && !/^-/u.test(after)) ||
+          (follows && (head || piped));
         const loose = !strong && follows && LOOSE_BEFORE.test(before);
         if (!strong && !loose) continue;
         // "people across the world" is a blurb
@@ -467,10 +541,11 @@
         hits.push({ ...hit, type: "weakClosed" });
         continue;
       }
-      const triggered = STRONG_BEFORE.test(before) || LOOSE_BEFORE.test(before) || COLON_BEFORE.test(before);
+      // Where the hire lives ("based in", "Location:"), not who they work with ("collaboration with
+      // engineers in the US")
+      const triggered = STRONG_BEFORE.test(before) || COLON_BEFORE.test(before);
       const closes =
-        tag ||
-        bareTag ||
+        ((tag || bareTag) && !besideEurope(k)) ||
         ANYWHERE_BEFORE.test(before) ||
         WIDE_AFTER.test(after) ||
         // "Open to US residents" (not "US candidates must be authorized…", the US half of a mixed hire)
@@ -478,7 +553,6 @@
         ONLY_AFTER.test(after) ||
         ROLE_AFTER.test(after) ||
         (restrict && (triggered || BASED_AFTER.test(after) || MUST_BE_BEFORE.test(before))) ||
-        (items.some((p) => p.kind === "state") && triggered) ||
         (field === "title" && (SEGMENT_BEFORE.test(before) || SEGMENT_AFTER.test(after)));
       if (closes) hits.push({ ...hit, type: "closed" });
     }
@@ -499,7 +573,12 @@
       if (m) hits.push({ type, field, text: m[0], ...extra });
     };
     add(ABSOLUTE_RE, "absolute");
-    add(NO_ABROAD_RE, "closed");
+    for (const m of first(text, NO_ABROAD_RE)) {
+      const next = text.slice(m.index + m[0].length, m.index + m[0].length + 40);
+      if (m[0].endsWith("outside") && places().outsideNext.test(next)) continue;
+      hits.push({ type: "closed", field, text: m[0] });
+      break;
+    }
     add(WORLD_RE, "strong", { scope: null, label: "Worldwide" });
     add(EOR_RE, "strong", { scope: null, label: "Worldwide", how: true });
     add(ANY_RE, "weak");
@@ -564,7 +643,9 @@
       }
       to = [...shown.values()].join(", ");
     } else {
-      to = use.find((h) => h.label)?.label || (use.some((h) => h.type === "tz") ? "European time zones" : "Europe");
+      // A place before how the job is held ("Remote across the EU. Employed through Deel.")
+      const label = use.find((h) => h.label && !h.how)?.label || use.find((h) => h.label)?.label;
+      to = label || (use.some((h) => h.type === "tz") ? "European time zones" : "Europe");
       const windows = [...use, ...reqs].filter((h) => h.type === "tz");
       if (windows.length && codes.length < ticked.size) {
         const lo = Math.min(...windows.map((h) => h.window[0]));

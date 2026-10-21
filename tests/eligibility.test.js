@@ -1,9 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import "./helpers/env.js";
 import "../extension/scrapers/title-match.js";
 import "../extension/scrapers/eligibility.js";
 import { ALL_COUNTRIES, countryNames } from "../extension/scrapers/countries.js";
+import { stripHtml } from "../extension/scrapers/util.js";
 
 const NAMES = ["Germany", "Deutschland", "Poland", "Polska"];
 const EVERY = ALL_COUNTRIES.flatMap((c) => countryNames(c.code));
@@ -126,6 +128,14 @@ test("company blurbs, travel and passing mentions are not where the job hires", 
     { company: "Acme Europe", description: "Acme Europe (remote-first) builds payment software." },
     // French "cet" is not CET
     { description: "Cet emploi est à temps plein." },
+    // Headcount, "we have", experience, awards
+    { description: "We're a team of 120 people across the US, Canada and Europe." },
+    { description: "We have engineers across Europe and North America." },
+    { description: "Experience working across Europe, the Middle East and Africa is a plus." },
+    { description: "We were named one of the best places to work in America and in Europe." },
+    // The employer's own team across time zones; an offset that spells out UK hours
+    { description: "We're an async-first team spread from PST to CET." },
+    { description: "You'll need to work UK hours (9am-5:30pm, UTC+0 in winter and UTC+1 in summer)." },
   ]) {
     assert.equal(check(job, EVERY).open, false, JSON.stringify(job));
   }
@@ -144,11 +154,25 @@ test("home-country wording closes the job, also against a loose open signal", ()
     // Northern Ireland is in the UK
     { location: "Belfast, Northern Ireland (Remote)" },
     { title: "Software Engineer - Northern Ireland (Remote)" },
+    // Things outside the US, not people
+    { description: "Up to 10% travel, including occasional trips outside the U.S. Must be authorized to work in the US." },
+    { description: "Over 40% of our revenue comes from customers outside the US." },
+    // A third person or a thing lives there, not the hire
+    { description: "You'll report to our VP of Engineering, who is based in Germany. Must be authorized to work in the US." },
+    { description: "Our clients include banks and insurers based in the UK and across Europe. Must be authorized to work in the US." },
+    { description: "Our infrastructure runs on AWS data centers located in the US and the EU. Must be authorized to work in the US." },
+    // Praise, a mission, a product, a perk
+    { description: "Our mission is to make care accessible to everyone in the world. Must be authorized to work in the US." },
+    { description: "We want to hire the best engineers in the world. Must be authorized to work in the US." },
+    { description: "Acme is the leading employer of record (EOR) platform. Must be authorized to work in the US." },
+    { description: "Perks: up to four weeks a year to work from anywhere in the world. Must be authorized to work in the US." },
     // Clearance and citizenship close it whatever else it says
     { description: "Must be a U.S. Person (ITAR). CET overlap required." },
     { description: "TS/SCI clearance required." },
     { description: "Must be SC cleared. Remote (Europe)." },
     { description: "Government of Canada Reliability Status is required." },
+    { description: "Must be able to obtain a Public Trust. Remote (Europe)." },
+    { description: "This position is subject to U.S. export control laws. Remote (Europe)." },
   ]) {
     assert.equal(check(job, EVERY).open, false, JSON.stringify(job));
   }
@@ -174,6 +198,28 @@ test("more ways postings say they hire in Europe", () => {
     // Weak closed wording for the US half of a mixed hire doesn't cancel it
     [{ description: "Remote - Europe or US. US candidates must be authorized to work in the United States. W2." }, EVERY, "Europe"],
     [{ title: "Software Engineer (EU - Remote)", description: "Must reside in the United States." }, EVERY, "EU"],
+    [{ description: "We are open to hiring talent from all over Europe and Latin America." }, EVERY, "Europe"],
+    [{ description: "We welcome applications from across the UK and Europe." }, EVERY, "Europe"],
+    [{ description: "We hire wherever you are, as long as you overlap four hours with Eastern Time." }, EVERY, "Worldwide"],
+    [{ description: "Anyone in Europe can apply." }, EVERY, "Europe"],
+    // A home tag next to a European one is the other half of the hire
+    [{ description: "Location: Remote (US/Canada) or Remote (Europe)." }, EVERY, "Europe"],
+    // The place, not the employer of record, says who
+    [{ description: "Remote across the EU. We use Remote.com as our employer of record." }, EVERY, "EU"],
+    // "UK or an EU country": one list
+    [{ description: "You must be based in the UK or an EU country." }, EVERY, "EU"],
+    [{ description: "Candidates must live in the UK or another EU country." }, EVERY, "EU"],
+    [{ description: "Must be based in the UK or within the EU." }, EVERY, "EU"],
+    [{ description: "Open to applicants residing in the UK, Ireland or elsewhere in the EU." }, EVERY, "EU"],
+    [{ description: "We can employ you in Canada, Ireland, Portugal or Spain." }, countryNames("IE"), "Ireland"],
+    // US boilerplate, collaboration and product words don't cancel a European tag
+    [{ description: "Remote (Europe or US). Notice to applicants residing in California: please review our CCPA notice." }, EVERY, "Europe"],
+    [{ description: "This role can be based anywhere in the US or Europe. For candidates located in California, Colorado or New York, the base salary range is $160,000 - $200,000." }, EVERY, "Europe"],
+    [{ description: "Remote (Europe). This position requires close collaboration with engineers in the US." }, EVERY, "Europe"],
+    [{ description: "Remote (Europe). You must be comfortable working with a team that is mostly in the US, and US candidates must be authorized to work in the United States." }, EVERY, "Europe"],
+    [{ description: "Remote (Europe or US). Our mission is to strengthen public trust in elections." }, EVERY, "Europe"],
+    [{ description: "Remote (Europe or US). We offer green card sponsorship for US employees." }, EVERY, "Europe"],
+    [{ description: "Remote (Europe or US). You'll build our export controls screening service." }, EVERY, "Europe"],
   ];
   for (const [job, names, to] of cases) {
     const r = check(job, names);
@@ -185,6 +231,49 @@ test("more ways postings say they hire in Europe", () => {
   assert.equal(check({ description: "Remote within 3 hours of GMT." }, countryNames("FI")).open, true);
   assert.equal(check({ description: "Remote within 1 hour of GMT." }, countryNames("FI")).open, false);
   assert.equal(check({ description: "Remote (Europe). Must be within UTC-1 to UTC+1." }, countryNames("RO")).open, false);
+  assert.equal(check({ description: "We can employ you in Canada, Ireland, Portugal or Spain." }, countryNames("FR")).open, false);
+});
+
+test("a bullet that runs into the next one still says where candidates live", () => {
+  // stripHtml joins list items with a space, as indeed.js reads them
+  const cases = [
+    ["<h3>Requirements</h3><ul><li>Based in the EU</li><li>5+ years of experience with Go</li></ul>", "EU"],
+    ["<ul><li>Candidates based in Germany or Poland</li><li>Experience with React</li></ul>", "Germany, Poland"],
+    ["<ul><li>Located in the EU or UK</li><li>Strong in Kotlin</li></ul>", "EU"],
+    ["<ul><li>Living in Europe</li><li>Fluent English</li></ul>", "Europe"],
+  ];
+  for (const [html, to] of cases) {
+    const r = open(stripHtml(html));
+    assert.equal(r.open, true, html);
+    assert.equal(r.to, to, html);
+  }
+  // Still no place: a thing located there, a compound
+  assert.equal(open("Universities located in the EU and US benchmark our models.").open, false);
+  assert.equal(open("Experience with EU-funded research.").open, false);
+});
+
+test("not and outside: who the employer can't hire, and where it can", () => {
+  for (const text of [
+    "We don't currently hire outside the US.",
+    "We aren't able to employ people outside the United States.",
+    "Candidates outside the United States will not be considered.",
+    "This role is not open to candidates in the EU or UK.",
+    "We do not hire in Europe.",
+    "Unfortunately, we are not able to hire candidates located in Europe at this time.",
+  ]) {
+    assert.equal(check({ description: text }, EVERY).open, false, text);
+  }
+  for (const [text, to] of [
+    ["Remote (Europe). We are unable to hire candidates outside the EU.", "Europe"],
+    ["Remote (Europe). We cannot hire outside of Europe.", "Europe"],
+    ["You can work from anywhere in the UK or Europe (we're unable to consider applicants outside of these regions).", "Europe"],
+    ["We are unable to hire outside the UK and EU.", "EU"],
+    ["Candidates based outside the US are welcome.", "Worldwide"],
+  ]) {
+    const r = check({ description: text }, EVERY);
+    assert.equal(r.open, true, text);
+    assert.equal(r.to, to, text);
+  }
 });
 
 test("every country's names, English and its own, are read", () => {
