@@ -27,7 +27,7 @@ import {
   sleep,
 } from "./util.js";
 import { readJson } from "./http.js";
-import { countryName } from "./countries.js";
+import { countryName, countryNames } from "./countries.js";
 
 const API_URL = "https://apis.indeed.com/graphql";
 
@@ -54,6 +54,8 @@ export const INDEED_SITES = {
   NO: "no",
   CH: "ch",
   GB: "uk",
+  CA: "ca",
+  US: "www",
 };
 
 const HEADERS = {
@@ -97,34 +99,38 @@ const TYPE_LABELS = {
   UXQZ8: "Volunteer",
 };
 
-// With no Title, each country is searched for marketing (and its own word
-// for it where that differs) and for its word for communications: Indeed's
-// search reads the posting text, and many PR and communications ads never
-// say "marketing". The title check then keeps the marketing roles.
-const DEFAULT_TERMS = ["marketing"];
+// With no Title, each country is searched for "developer" and its own word
+// for it (Indeed's search reads the posting text); the title check then keeps
+// the developer roles.
+const DEFAULT_TERMS = ["developer"];
 const LOCAL_TERMS = {
-  AT: ["Kommunikation"],
-  BE: ["communication", "communicatie"],
-  CH: ["Kommunikation"],
-  CZ: ["komunikace"],
-  DE: ["Kommunikation"],
-  DK: ["markedsføring", "kommunikation"],
-  ES: ["comunicación"],
-  FI: ["markkinointi", "viestintä"],
-  FR: ["communication"],
-  GB: ["communications"],
-  GR: ["μάρκετινγκ", "επικοινωνία"],
-  HU: ["kommunikáció"],
-  IE: ["communications"],
-  IT: ["comunicazione"],
-  LU: ["communication"],
-  NL: ["communicatie"],
-  NO: ["markedsføring", "kommunikasjon"],
-  PL: ["komunikacji"],
-  PT: ["comunicação"],
-  RO: ["comunicare"],
-  SE: ["marknadsföring", "kommunikation"],
+  AT: ["Entwickler"],
+  BE: ["développeur", "ontwikkelaar"],
+  CH: ["Entwickler"],
+  CZ: ["vývojář"],
+  DE: ["Entwickler"],
+  DK: ["udvikler"],
+  ES: ["desarrollador"],
+  FI: ["kehittäjä"],
+  FR: ["développeur"],
+  GB: ["software engineer"],
+  GR: ["προγραμματιστής"],
+  HU: ["fejlesztő"],
+  IE: ["software engineer"],
+  IT: ["sviluppatore"],
+  LU: ["développeur"],
+  NL: ["ontwikkelaar"],
+  NO: ["utvikler"],
+  PL: ["programista"],
+  PT: ["programador"],
+  RO: ["dezvoltator"],
+  SE: ["utvecklare"],
+  CA: ["software engineer"],
+  US: ["software engineer"],
 };
+// Employers abroad: most of their remote jobs are local, so each search also
+// names where the job may be held; Indeed's search reads the posting text
+const ABROAD_WORDS = ["Europe", "EMEA", "worldwide"];
 
 const PAGE_PAUSE_MS = 500;
 const COUNTRY_PAUSE_MS = 1000;
@@ -200,17 +206,19 @@ export function requestHeaders(country) {
 
 /**
  * What to search on one country's Indeed: each comma-separated title (plus
- * the skills, so Indeed checks them on the whole posting), or with no title
- * marketing and communications in English and the local language.
+ * the stack, so Indeed checks it on the whole posting), or with no title
+ * "developer" in English and the local language. For employers abroad each
+ * search also names Europe, EMEA or worldwide.
  */
-export function searchTerms(title, skills, country) {
+export function searchTerms(title, stack, country, { abroad = false } = {}) {
   const titles = String(title || "")
     .split(/[,;]/)
     .map((t) => t.trim())
     .filter(Boolean);
   const roles = titles.length ? titles : [...DEFAULT_TERMS, ...(LOCAL_TERMS[country] || [])];
-  const extra = String(skills || "").trim();
-  return roles.map((role) => [role, extra].filter(Boolean).join(" "));
+  const extra = String(stack || "").trim();
+  const terms = roles.map((role) => [role, extra].filter(Boolean).join(" "));
+  return abroad ? terms.flatMap((term) => ABROAD_WORDS.map((where) => `${term} ${where}`)) : terms;
 }
 
 function toDatePosted(ms) {
@@ -272,8 +280,9 @@ const queryRejected = (res, data) =>
 /**
  * @param {{
  *   title?: string,
- *   skills?: string,
+ *   stack?: string,
  *   countries: string[],
+ *   abroad?: string[],
  *   resultsWanted: number,
  *   datePreset?: string,
  *   years?: number | "",
@@ -283,8 +292,9 @@ const queryRejected = (res, data) =>
  */
 export async function scrapeIndeed({
   title,
-  skills,
+  stack,
   countries,
+  abroad,
   resultsWanted,
   datePreset,
   years,
@@ -294,8 +304,11 @@ export async function scrapeIndeed({
   const preset = resolveDatePreset(datePreset);
   const titleFilter = (title || "").trim();
   const wanted = new Set(countries || []);
-  const targets = [...wanted].filter((code) => INDEED_SITES[code]);
+  const abroadSites = new Set((abroad || []).filter((code) => INDEED_SITES[code] && !wanted.has(code)));
+  const targets = [...[...wanted].filter((code) => INDEED_SITES[code]), ...abroadSites];
   const noSite = [...wanted].filter((code) => !INDEED_SITES[code]);
+  // Names a job abroad may give for where it hires: the ticked countries in English and their own language
+  const openToNames = [...wanted].flatMap((code) => countryNames(code));
   if (noSite.length) {
     onProgress?.(`Indeed has no site for ${noSite.map(countryName).join(", ")}: not searched`);
   }
@@ -308,6 +321,7 @@ export async function scrapeIndeed({
   const failures = [];
   let scanned = 0;
   let elsewhere = 0;
+  let notOpen = 0;
   let styleIndex = 0;
   let requests = 0;
   // A country's results are newest first; most windows fit in a page or two
@@ -355,7 +369,8 @@ export async function scrapeIndeed({
   countries: for (const country of targets) {
     const name = countryName(country);
     const countryMatched = [];
-    for (const term of searchTerms(titleFilter, skills, country)) {
+    const isAbroad = abroadSites.has(country);
+    for (const term of searchTerms(titleFilter, stack, country, { abroad: isAbroad })) {
       let cursor = null;
       for (let page = 1; page <= MAX_PAGES && countryMatched.length < resultsWanted; page++) {
         onProgress?.(
@@ -385,10 +400,20 @@ export async function scrapeIndeed({
           scanned += 1;
           const job = toJob(raw, country);
           if (!job) continue;
-          // A job placed in a country that isn't ticked isn't open to the ticked ones
-          if (!wanted.has(job.country)) {
+          if (isAbroad) {
+            // Employers abroad count only when the posting says it hires in Europe
+            const open = globalThis.jbOpenToEurope(job, openToNames);
+            if (!open.open) {
+              notOpen += 1;
+              continue;
+            }
+            job.open_to = open.to;
+          } else if (!wanted.has(job.country)) {
+            // A job placed in a country that isn't ticked isn't open to the ticked ones
             elsewhere += 1;
             continue;
+          } else {
+            job.open_to = countryName(job.country);
           }
           pageJobs.push(job);
         }
@@ -396,7 +421,7 @@ export async function scrapeIndeed({
           ...filterByRequest(pageJobs, {
             hoursOld: preset.hoursOld,
             title: titleFilter,
-            skills,
+            stack,
             years,
             jobType,
           })
@@ -426,7 +451,8 @@ export async function scrapeIndeed({
   }
   onProgress?.(
     `Indeed: ${targets.length} ${targets.length === 1 ? "country" : "countries"}, ${scanned} scanned` +
-      `${elsewhere ? `, ${elsewhere} placed in other countries` : ""} → ${matched.length} matching`
+      `${elsewhere ? `, ${elsewhere} placed in other countries` : ""}` +
+      `${notOpen ? `, ${notOpen} abroad not open to Europe` : ""} → ${matched.length} matching`
   );
   // Newest first across countries, then Count
   return matched

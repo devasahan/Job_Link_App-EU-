@@ -19,10 +19,10 @@ let calls;
 function rawJob(key, overrides = {}) {
   return {
     key,
-    title: "Online Marketing Manager (m/w/d)",
+    title: "Backend-Entwickler (m/w/d)",
     datePublished: Date.now() - 2 * HOUR,
     dateOnIndeed: Date.now() - 2 * HOUR,
-    description: { html: "<p>Du verantwortest SEO und SEA.</p><ul><li>3+ Jahre Berufserfahrung</li></ul>" },
+    description: { html: "<p>Du entwickelst unsere APIs in Go.</p><ul><li>3+ Jahre Berufserfahrung</li></ul>" },
     location: { city: "Berlin", admin1Code: "BE", countryCode: "DE", formatted: { long: "Homeoffice in Berlin" } },
     employer: { name: "Acme GmbH" },
     attributes: [
@@ -54,9 +54,11 @@ afterEach(() => {
   globalThis.fetch = realFetch;
 });
 
-test("Indeed sites: 18 EU countries plus Norway, Switzerland and the UK", () => {
-  assert.equal(Object.keys(INDEED_SITES).length, 21);
+test("Indeed sites: 18 EU countries, Norway, Switzerland, and the UK, Canada and US", () => {
+  assert.equal(Object.keys(INDEED_SITES).length, 23);
   assert.equal(INDEED_SITES.GB, "uk");
+  assert.equal(INDEED_SITES.US, "www");
+  assert.equal(INDEED_SITES.CA, "ca");
   assert.equal(INDEED_SITES.DE, "de");
   for (const code of ["BG", "HR", "CY", "EE", "LV", "LT", "MT", "SK", "SI"]) {
     assert.equal(INDEED_SITES[code], undefined, code);
@@ -92,12 +94,18 @@ test("query escapes the search words", () => {
   assert.doesNotMatch(buildQuery("", null, ""), /what:|cursor:/);
 });
 
-test("search terms: each title, or marketing and communications in the local language", () => {
-  assert.deepEqual(searchTerms("", "", "DE"), ["marketing", "Kommunikation"]);
-  assert.deepEqual(searchTerms("", "HubSpot", "SE"), ["marketing HubSpot", "marknadsföring HubSpot", "kommunikation HubSpot"]);
+test("search terms: each title, or developer in English and the local language", () => {
+  assert.deepEqual(searchTerms("", "", "DE"), ["developer", "Entwickler"]);
+  assert.deepEqual(searchTerms("", "React", "SE"), ["developer React", "utvecklare React"]);
   // Every country Indeed covers has its own words
   for (const code of Object.keys(INDEED_SITES)) assert.ok(searchTerms("", "", code).length >= 2, code);
-  assert.deepEqual(searchTerms("SEO Manager, Content Marketing", "", "FR"), ["SEO Manager", "Content Marketing"]);
+  assert.deepEqual(searchTerms("Backend Developer, Platform Engineer", "", "FR"), ["Backend Developer", "Platform Engineer"]);
+  // Employers abroad: each search also names where the job may be held
+  assert.deepEqual(searchTerms("Backend Developer", "Go", "US", { abroad: true }), [
+    "Backend Developer Go Europe",
+    "Backend Developer Go EMEA",
+    "Backend Developer Go worldwide",
+  ]);
 });
 
 test("toJob: country site link, type from attribute keys, years from the text", () => {
@@ -107,7 +115,7 @@ test("toJob: country site link, type from attribute keys, years from the text", 
   assert.equal(job.listing_type, "Full-time");
   assert.equal(job.location, "Homeoffice in Berlin");
   assert.equal(job.is_remote, "Yes");
-  assert.equal(job.description, "Du verantwortest SEO und SEA. 3+ Jahre Berufserfahrung");
+  assert.equal(job.description, "Du entwickelst unsere APIs in Go. 3+ Jahre Berufserfahrung");
   assert.equal(toJob(rawJob("k2", { location: { countryCode: "GB" } }), "GB").job_url, "https://uk.indeed.com/viewjob?jk=k2");
   // Indeed writes Slovenia as SL
   assert.equal(toJob(rawJob("k3", { location: { countryCode: "SL" } }), "DE").country, "SI");
@@ -130,7 +138,7 @@ test("scrapeIndeed searches each ticked country with an Indeed site", async () =
     }
     return page([
       rawJob("fr1", {
-        title: "Chargé de communication (H/F)",
+        title: "Développeur Full-Stack (H/F)",
         dateOnIndeed: Date.now() - HOUR,
         location: { countryCode: "FR", formatted: { long: "Télétravail à Paris" } },
       }),
@@ -146,13 +154,14 @@ test("scrapeIndeed searches each ticked country with an Indeed site", async () =
     jobType: "fulltime",
     onProgress: (m) => log.push(m),
   });
-  // Marketing, then communications, in each country's words; repeats are dropped
+  // "developer" in English and each country's own word; repeats are dropped
   assert.deepEqual(calls.map((c) => `${c.country} ${c.query.match(/what: "([^"]*)"/)[1]}`), [
-    "DE marketing",
-    "DE Kommunikation",
-    "FR marketing",
-    "FR communication",
+    "DE developer",
+    "DE Entwickler",
+    "FR developer",
+    "FR développeur",
   ]);
+  assert.equal(jobs[0].open_to, "France");
   assert.deepEqual(jobs.map((j) => j.job_url), [
     "https://fr.indeed.com/viewjob?jk=fr1",
     "https://de.indeed.com/viewjob?jk=de1",
@@ -179,6 +188,41 @@ test("job type is read from attribute keys; jobs without a type stay", async () 
   assert.deepEqual(keys(await run("fulltime")), ["fixedterm", "full", "untyped"]);
   assert.deepEqual(keys(await run("both")), ["fixedterm", "freelance", "full", "untyped"]);
   assert.doesNotMatch(calls[0].query, /CF3CP|NJXCK/);
+});
+
+test("employers abroad count only when the posting is open to Europe or a ticked country", async () => {
+  const us = (key, title, description) =>
+    rawJob(key, { title, description: { html: description }, location: { countryCode: "US", formatted: { long: "Remote" } } });
+  mockFetch((country) => {
+    if (country === "US") {
+      return page([
+        us("us-eu", "Senior Backend Engineer", "<p>Remote (Europe). We hire across the EU.</p>"),
+        us("us-de", "Platform Engineer", "<p>Open to candidates based in Germany.</p>"),
+        us("us-only", "Backend Engineer", "<p>This role is US only.</p>"),
+        us("us-quiet", "Frontend Engineer", "<p>Great benefits, remote.</p>"),
+      ]);
+    }
+    return page([rawJob("de1")]);
+  });
+  const log = [];
+  const jobs = await scrapeIndeed({
+    countries: ["DE"],
+    abroad: ["US"],
+    resultsWanted: 10,
+    datePreset: "today",
+    onProgress: (m) => log.push(m),
+  });
+  assert.deepEqual(
+    jobs.map((j) => `${j.country} ${j.open_to} ${j.job_url}`).sort(),
+    [
+      "DE Germany https://de.indeed.com/viewjob?jk=de1",
+      "US Europe https://www.indeed.com/viewjob?jk=us-eu",
+      "US Germany https://www.indeed.com/viewjob?jk=us-de",
+    ]
+  );
+  const usTerms = calls.filter((c) => c.country === "US").map((c) => c.query.match(/what: "([^"]*)"/)[1]);
+  assert.deepEqual(usTerms.slice(0, 3), ["developer Europe", "developer EMEA", "developer worldwide"]);
+  assert.ok(log.some((m) => /2 abroad not open to Europe/.test(m)));
 });
 
 test("scrapeIndeed pages with the cursor and stops at Count", async () => {

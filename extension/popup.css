@@ -148,6 +148,10 @@ form {
   color: var(--muted);
 }
 
+.abroad .block-note {
+  grid-column: 1 / -1;
+}
+
 .block-note {
   margin: 6px 0 0;
   line-height: 1.35;

@@ -1,7 +1,7 @@
 import { scrapeJobs } from "./scrapers/index.js";
 import { resolveDatePreset } from "./scrapers/util.js";
 import { loadDownloaded, rememberDownloaded } from "./scrapers/history.js";
-import { countryName, describeCountries } from "./scrapers/countries.js";
+import { cleanAbroadCodes, countryName, describeCountries } from "./scrapers/countries.js";
 
 const statusEl = document.getElementById("status");
 const logEl = document.getElementById("log");
@@ -26,6 +26,7 @@ function downloadExcel(jobs) {
     Company: j.company ?? "",
     Location: j.location ?? "",
     Country: j.country ? countryName(j.country) : "",
+    "Open to": j.open_to ?? "",
     Site: j.site ?? "",
     Posted: j.date_posted ?? "",
     Remote: j.is_remote ?? "",
@@ -54,7 +55,7 @@ function downloadExcel(jobs) {
   XLSX.utils.book_append_sheet(book, sheet, "Jobs");
 
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-  XLSX.writeFile(book, `jobbridge-eu-marketing-${stamp}.xlsx`);
+  XLSX.writeFile(book, `jobbridge-eu-developers-${stamp}.xlsx`);
 }
 
 async function run() {
@@ -64,7 +65,7 @@ async function run() {
     return;
   }
 
-  const { title, skills, count, sites, countries, datePreset, years, jobType, skipDownloaded } =
+  const { title, stack, count, sites, countries, abroad, datePreset, years, jobType, skipDownloaded } =
     pendingFetch;
   await chrome.storage.local.remove("pendingFetch");
 
@@ -83,16 +84,17 @@ async function run() {
   // Older settings have no skipDownloaded: skipping is the default
   const downloaded = skipDownloaded === false ? null : await loadDownloaded();
   log(
-    `Platforms: ${sites.join(", ")}\nCountries: ${describeCountries(countries)}\nCount (per site): ${count}\nPosted: ${preset.label}\nType: ${typeLabel}\nYears: ${yearsLabel}\nTitle: ${title || "any marketing role"}\nSkills: ${skills || "—"}\nFilters: remote · open to the selected countries\nAlready downloaded: ${downloaded ? `skipped (${downloaded.size} remembered)` : "included"}`
+    `Platforms: ${sites.join(", ")}\nCountries: ${describeCountries(countries)}\nCount (per site): ${count}\nPosted: ${preset.label}\nType: ${typeLabel}\nYears: ${yearsLabel}\nEmployers abroad: ${cleanAbroadCodes(abroad).map(countryName).join(", ") || "—"}\nTitle: ${title || "any developer role"}\nStack: ${stack || "—"}\nFilters: remote · open to the selected countries\nAlready downloaded: ${downloaded ? `skipped (${downloaded.size} remembered)` : "included"}`
   );
-  setStatus("Fetching remote EU marketing jobs from selected platforms…");
+  setStatus("Fetching remote developer jobs open to the EU from selected platforms…");
 
   try {
     const { jobs, errors, skipped } = await scrapeJobs({
       sites,
       countries,
+      abroad,
       title,
-      skills,
+      stack,
       count,
       datePreset: preset.id,
       years: years === "" || years == null ? "" : Number(years),

@@ -6,7 +6,7 @@ import {
   resolveDatePreset,
 } from "./util.js";
 import { normalizeWords } from "./history.js";
-import { cleanCountryCodes } from "./countries.js";
+import { cleanAbroadCodes, cleanCountryCodes } from "./countries.js";
 
 // More boards plug in here: (opts) => Promise<job[]>, see scrapeIndeed
 const SCRAPERS = {
@@ -19,12 +19,15 @@ export const BOARD_COUNTRIES = {
 };
 
 /**
- * Fetch remote marketing jobs open to the selected EU countries (no local server).
+ * Fetch remote developer jobs open to the selected EU countries (no local
+ * server): jobs based in those countries, and jobs at employers abroad (UK,
+ * Canada, US) that say they hire there.
  * @param {{
  *   sites: string[],
  *   countries: string[],
+ *   abroad?: string[],
  *   title: string,
- *   skills: string,
+ *   stack: string,
  *   count: number,
  *   datePreset?: string,
  *   years?: number | "",
@@ -38,8 +41,9 @@ export const BOARD_COUNTRIES = {
 export async function scrapeJobs({
   sites,
   countries,
+  abroad,
   title,
-  skills,
+  stack,
   count,
   datePreset,
   years,
@@ -48,7 +52,7 @@ export async function scrapeJobs({
   onProgress,
 }) {
   const titleQ = (title || "").trim();
-  const skillsQ = (skills || "").trim();
+  const stackQ = (stack || "").trim();
   if (!sites?.length) {
     throw new Error("Select at least one platform");
   }
@@ -56,6 +60,7 @@ export async function scrapeJobs({
   if (!countryCodes.length) {
     throw new Error("Select at least one country");
   }
+  const abroadCodes = cleanAbroadCodes(abroad);
 
   const preset = resolveDatePreset(datePreset);
   const resultsWanted = Math.max(1, Math.min(200, Number(count) || 50));
@@ -74,8 +79,9 @@ export async function scrapeJobs({
       const repeats = downloaded ? downloaded.recentCount(site, preset.hoursOld) : 0;
       const jobs = await fn({
         title: titleQ,
-        skills: skillsQ,
+        stack: stackQ,
         countries: countryCodes,
+        abroad: abroadCodes,
         resultsWanted: Math.min(400, resultsWanted + repeats),
         datePreset: preset.id,
         years,
@@ -91,7 +97,7 @@ export async function scrapeJobs({
     }
   }
 
-  // Each scraper already applied the skills while paging, so Count holds
+  // Each scraper already applied the stack while paging, so Count holds
   let jobs = filterByTitle(all, titleQ);
   for (const job of jobs) {
     if (job.years_required == null || job.years_required === "") {

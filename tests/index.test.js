@@ -33,16 +33,16 @@ function serve(byCountry) {
   return asked;
 }
 
-test("a run: countries in popup order, one row per title + company, marketing only", async () => {
+test("a run: countries in popup order, one row per title + company, developers only", async () => {
   const asked = serve({
-    DE: [job("1", "DE", "Marketing Manager (m/w/d)"), job("2", "DE", "Buchhalter (m/w/d)")],
-    AT: [job("3", "AT", "Marketing Manager (m/w/d)"), job("4", "AT", "SEO Specialist", "Beta")],
+    DE: [job("1", "DE", "Backend-Entwickler (m/w/d)"), job("2", "DE", "Buchhalter (m/w/d)")],
+    AT: [job("3", "AT", "Backend-Entwickler (m/w/d)"), job("4", "AT", "Python Developer", "Beta")],
   });
   const { jobs, errors } = await scrapeJobs({
     sites: ["indeed"],
     countries: ["de", "AT", "XX"],
     title: "",
-    skills: "",
+    stack: "",
     count: 50,
     datePreset: "today",
     jobType: "fulltime",
@@ -52,26 +52,26 @@ test("a run: countries in popup order, one row per title + company, marketing on
   // The same job on the Austrian and German sites is one row
   assert.deepEqual(
     jobs.map((j) => `${j.country} ${j.title}`).sort(),
-    ["AT Marketing Manager (m/w/d)", "AT SEO Specialist"]
+    ["AT Backend-Entwickler (m/w/d)", "AT Python Developer"]
   );
 });
 
 test("a run with titles and earlier downloads", async () => {
   installChromeStorage();
-  serve({ FR: [job("5", "FR", "Chargé de communication"), job("6", "FR", "Content Manager"), job("7", "FR", "SEO Manager")] });
-  await rememberDownloaded([{ title: "SEO Manager", company: "Acme", job_url: "https://fr.indeed.com/viewjob?jk=7", site: "indeed" }]);
+  serve({ FR: [job("5", "FR", "Développeur Java (H/F)"), job("6", "FR", "Data Analyst"), job("7", "FR", "Python Developer")] });
+  await rememberDownloaded([{ title: "Python Developer", company: "Acme", job_url: "https://fr.indeed.com/viewjob?jk=7", site: "indeed" }]);
   const { jobs, skipped } = await scrapeJobs({
     sites: ["indeed"],
     countries: ["FR"],
-    title: "communication, seo",
-    skills: "",
+    title: "java developer, python",
+    stack: "",
     count: 10,
     datePreset: "3days",
     jobType: "both",
     downloaded: await loadDownloaded(),
   });
   assert.equal(skipped, 1);
-  assert.deepEqual(jobs.map((j) => j.title), ["Chargé de communication"]);
+  assert.deepEqual(jobs.map((j) => j.title), ["Développeur Java (H/F)"]);
 });
 
 test("a run needs a platform and a country", async () => {

@@ -11,7 +11,7 @@
       <span class="mark" aria-hidden="true">JB</span>
       <div>
         <h1>JobBridge EU</h1>
-        <p class="sub">Remote · EU · marketing · no local server</p>
+        <p class="sub">Remote · EU · developers · no local server</p>
       </div>
     </header>
 
@@ -36,6 +36,26 @@
         <div id="country-list" class="country-grid"></div>
         <p id="country-note" class="hint block-note" hidden></p>
       </details>
+
+      <fieldset class="platforms abroad">
+        <legend>Employers abroad</legend>
+        <label class="check">
+          <input type="checkbox" name="abroad" value="GB" checked />
+          United Kingdom
+        </label>
+        <label class="check">
+          <input type="checkbox" name="abroad" value="CA" checked />
+          Canada
+        </label>
+        <label class="check">
+          <input type="checkbox" name="abroad" value="US" checked />
+          United States
+        </label>
+        <p class="hint block-note">
+          Their remote jobs that say they hire in Europe, the EU, EMEA,
+          worldwide, or one of your countries.
+        </p>
+      </fieldset>
 
       <label class="field">
         <span>Count</span>
@@ -76,12 +96,12 @@
           min="0"
           max="40"
           step="0.5"
-          placeholder="e.g. 3 (optional)"
+          placeholder="e.g. 5 (optional)"
         />
       </label>
       <p class="hint block">
-        Enter 3 to keep jobs that ask for 3.5 years or fewer
-        (“3+ years experience”, “mindestens 3 Jahre Berufserfahrung”).
+        Enter 5 to keep jobs that ask for 5.5 years or fewer
+        (“5+ years experience”, “mindestens 5 Jahre Berufserfahrung”).
         Jobs that don’t state years stay.
       </p>
 
@@ -91,22 +111,22 @@
           id="title"
           name="title"
           type="text"
-          placeholder="Any marketing role (optional)"
+          placeholder="Any developer role (optional)"
         />
       </label>
       <p class="hint block">
-        Empty: any marketing role (SEO, SEA/PPC, content, CRM, brand, social,
-        PR…). Separate titles with commas to get any of them, e.g.
-        “SEO Manager, Content Marketing”.
+        Empty: any software-development role (developer, software engineer,
+        DevOps, data, QA automation…) in any EU language. Separate titles with
+        commas to get any of them, e.g. “Backend Developer, Platform Engineer”.
       </p>
 
       <label class="field">
-        <span>Skills</span>
+        <span>Stack</span>
         <input
-          id="skills"
-          name="skills"
+          id="stack"
+          name="stack"
           type="text"
-          placeholder="e.g. HubSpot Google Ads (optional)"
+          placeholder="e.g. React TypeScript"
         />
       </label>
 

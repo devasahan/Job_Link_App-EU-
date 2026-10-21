@@ -1,7 +1,8 @@
 /** Shared helpers for JobBridge extension scrapers. */
 
 import "./title-match.js";
-import "./marketing.js";
+import "./developer.js";
+import "./eligibility.js";
 import "./job-filters.js";
 
 export const DATE_PRESETS = {
@@ -30,7 +31,7 @@ export function sleep(ms) {
 
 export function stripHtml(html) {
   if (!html) return "";
-  // Keep "<li>SEO</li><li>SEA</li>" from becoming "SEOSEA"
+  // Keep "<li>React</li><li>AWS</li>" from becoming "ReactAWS"
   const spaced = String(html).replace(BLOCK_TAG_RE, " $&");
   const doc = new DOMParser().parseFromString(spaced, "text/html");
   return (doc.body.textContent || "").replace(/\s+/g, " ").trim();
@@ -41,12 +42,13 @@ export function formatLocation(parts) {
 }
 
 /**
- * Every word of one comma-separated title phrase (Sr = Senior, SEO = search
- * engine optimisation, …) is in the job title. No title: any marketing role.
+ * Every word of one comma-separated title (Sr = Senior, Front-End = Frontend,
+ * Entwickler = Developer, …) is in the job title. No title: any
+ * software-development role.
  */
 export function titleMatches(jobTitle, title) {
   // A title with no usable words ("-", "(m/w/d)") counts as none
-  if (!globalThis.jbTitleQueryPhrases(title).length) return globalThis.jbIsMarketingTitle(jobTitle);
+  if (!globalThis.jbTitleQueryPhrases(title).length) return globalThis.jbIsDeveloperTitle(jobTitle);
   return globalThis.jbTitleMatches(jobTitle, title);
 }
 
@@ -81,15 +83,15 @@ export function acceptJob(job, { years, jobType } = {}) {
 }
 
 /**
- * Everything a board's results must pass. Pass `skills` only for boards that
- * return the job description; boards searched with the skill words already
+ * Everything a board's results must pass. Pass `stack` only for boards that
+ * return the job description; boards searched with the stack words already
  * checked the whole posting.
  */
-export function filterByRequest(jobs, { title, skills, years, jobType, hoursOld } = {}) {
+export function filterByRequest(jobs, { title, stack, years, jobType, hoursOld } = {}) {
   let out = jobs;
   if (hoursOld) out = filterByHoursOld(out, hoursOld);
   out = filterByTitle(out, title);
-  if (skills) out = filterBySkills(out, skills);
+  if (stack) out = filterByStack(out, stack);
   return out.filter((job) => acceptJob(job, { years, jobType }));
 }
 
@@ -108,10 +110,10 @@ export function withinHours(datePosted, hoursOld) {
   return t >= cutoff;
 }
 
-/** Every skill word must be a whole word in the title or description. */
-export function filterBySkills(jobs, skills) {
-  if (!String(skills || "").trim()) return jobs;
-  return jobs.filter((j) => globalThis.jbSkillsMatch(j, skills));
+/** Every stack word must be a whole word in the title or description. */
+export function filterByStack(jobs, stack) {
+  if (!String(stack || "").trim()) return jobs;
+  return jobs.filter((j) => globalThis.jbStackMatches(j, stack));
 }
 
 /** Keep jobs whose date_posted is within hoursOld (when a parseable date exists). */
@@ -136,8 +138,10 @@ export function normalizeJob(partial) {
     title: partial.title || "",
     company: partial.company || "",
     location: partial.location || "",
-    // ISO 3166 alpha-2 code of the country the job is open to ("DE")
+    // ISO 3166 alpha-2 code of the country the job is listed in ("DE", "US")
     country: partial.country || "",
+    // Who can take it: the country's name, or "Europe", "EMEA", "Worldwide"… for employers abroad
+    open_to: partial.open_to || "",
     site: partial.site || "",
     listing_type: partial.listing_type || "",
     date_posted: partial.date_posted || "",
