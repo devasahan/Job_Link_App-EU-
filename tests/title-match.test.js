@@ -38,6 +38,8 @@ test("developer, engineer and software in EU languages read as the English words
   assert.equal(words("Szoftvermérnök"), "software engineer");
   assert.equal(words("Dateningenieur (m/w/d)"), "daten engineer m w d");
   assert.equal(words("Engenheiro de Software"), "engineer de software");
+  assert.equal(words("Softvérový inžinier (Java)"), "software engineer java");
+  assert.equal(words("Ingénieur Sécurité Logicielle"), "engineer securite software");
   // Dotted abbreviations are one word
   assert.equal(words("Ingénieur(e) I.A F/H"), "engineer e ia f h");
   assert.equal(words("SDE II"), "software development engineer ii");

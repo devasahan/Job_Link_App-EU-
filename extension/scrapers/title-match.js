@@ -49,13 +49,13 @@
     // ("Dateningenieur", "dataingenjör", "ohjelmistoinsinööri", "szoftvermérnök")
     [/(?:ingenieur(?:innen|in|e|s)?|ingenjor(?:er)?|ingenior(?:er|en)?|insinoori(?:t)?|mernok(?:ok|ot)?)(?![\p{L}\p{N}])/gu, " engineer"],
     [
-      /(?<![\p{L}\p{N}])(?:ingenier[oa]s?|ingegner[ei]|inzynier(?:a|owie)?|inzenyr(?:a|ka|i)?|inginer(?:a|ul|i)?|engenheir[oa]s?|μηχανικ\p{L}*)(?![\p{L}\p{N}])/gu,
+      /(?<![\p{L}\p{N}])(?:ingenier[oa]s?|ingegner[ei]|inzynier(?:a|owie)?|inzenyr(?:a|ka|i)?|inzinier(?:ka|a|i|ov)?|inginer(?:a|ul|i)?|engenheir[oa]s?|μηχανικ\p{L}*)(?![\p{L}\p{N}])/gu,
       "engineer",
     ],
-    // Software ("Ingénieur logiciel", "Inżynier oprogramowania", "Ohjelmistokehittäjä",
-    // "mjukvaruutvecklare", "softwarový inženýr")
+    // Software ("Ingénieur logiciel", "Sécurité logicielle", "Inżynier oprogramowania",
+    // "Ohjelmistokehittäjä", "mjukvaruutvecklare", "softwarový inženýr")
     [
-      /(?<![\p{L}\p{N}])(?:logiciels?|oprogramowania|ohjelmisto|softwaru|softwarov\p{L}*|(?:sz|s)oftver\p{L}*|programvar[aeu]|mjukvar[au]|λογισμικ(?:ου?|ων|α))(?![\p{L}\p{N}])/gu,
+      /(?<![\p{L}\p{N}])(?:logiciel(?:le)?s?|oprogramowania|ohjelmisto|softwaru|softwarov\p{L}*|(?:sz|s)oftver\p{L}*|programvar[aeu]|mjukvar[au]|λογισμικ(?:ου?|ων|α))(?![\p{L}\p{N}])/gu,
       "software",
     ],
   ];
