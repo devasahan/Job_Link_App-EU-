@@ -5,16 +5,18 @@
  * Entries are kept for 30 days; the date windows are at most 3 days.
  */
 
+import "./title-match.js";
+
 const STORE_KEY = "downloadedJobs";
 const KEEP_MS = 30 * 86400e3;
 // Tracking parameters that change between visits to the same job
 const TRACKING_PARAM_RE = /^(?:utm_\w+|trk|trackingId|refId|ref|src|source|from|gh_src|lever-source)$/i;
 
-/** Lowercase words only: the same rule the run uses to merge boards. */
+/** Lowercase words without accents: the same rule the run uses to merge boards. */
 export const normalizeWords = (s) =>
-  String(s || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9+#]+/g, " ")
+  globalThis
+    .jbFold(s)
+    .replace(/[^\p{L}\p{N}+#]+/gu, " ")
     .trim();
 
 function canonicalUrl(url) {
@@ -30,13 +32,13 @@ function canonicalUrl(url) {
   }
 }
 
-/** The keys a job is remembered by. Turing lists every role as "Turing", so only its link counts. */
+/** The keys a job is remembered by. */
 export function jobKeys(job) {
   const keys = [];
   if (job?.job_url) keys.push(`url:${canonicalUrl(job.job_url)}`);
   const title = normalizeWords(job?.title);
   const company = normalizeWords(job?.company);
-  if (title && company && job.site !== "turing") keys.push(`job:${title}|${company}`);
+  if (title && company) keys.push(`job:${title}|${company}`);
   return keys;
 }
 

@@ -1,17 +1,4 @@
-import { scrapeIndeed } from "./indeed.js";
-import { scrapeLinkedIn } from "./linkedin.js";
-import { scrapeWellfound } from "./wellfound.js";
-import { scrapeGlassdoor } from "./glassdoor.js";
-import { scrapeZipRecruiter } from "./ziprecruiter.js";
-import { scrapeJobright } from "./jobright.js";
-import { scrapeDice } from "./dice.js";
-import { scrapeHimalayas } from "./himalayas.js";
-import { scrapeJobicy } from "./jobicy.js";
-import { scrapeHackerNews } from "./hackernews.js";
-import { scrapeBuiltin } from "./builtin.js";
-import { scrapeJobspresso } from "./jobspresso.js";
-import { scrapeWorkAtAStartup } from "./workatastartup.js";
-import { scrapeTuring } from "./turing.js";
+import { INDEED_SITES, scrapeIndeed } from "./indeed.js";
 import {
   acceptJob,
   filterByTitle,
@@ -19,34 +6,29 @@ import {
   resolveDatePreset,
 } from "./util.js";
 import { normalizeWords } from "./history.js";
+import { cleanCountryCodes } from "./countries.js";
 
+// More boards plug in here: (opts) => Promise<job[]>, see scrapeIndeed
 const SCRAPERS = {
   indeed: scrapeIndeed,
-  linkedin: scrapeLinkedIn,
-  wellfound: scrapeWellfound,
-  glassdoor: scrapeGlassdoor,
-  zip_recruiter: scrapeZipRecruiter,
-  jobright: scrapeJobright,
-  dice: scrapeDice,
-  himalayas: scrapeHimalayas,
-  jobicy: scrapeJobicy,
-  hackernews: scrapeHackerNews,
-  builtin: scrapeBuiltin,
-  jobspresso: scrapeJobspresso,
-  workatastartup: scrapeWorkAtAStartup,
-  turing: scrapeTuring,
+};
+
+/** Countries each board can search (the popup greys out the others). */
+export const BOARD_COUNTRIES = {
+  indeed: Object.keys(INDEED_SITES),
 };
 
 /**
- * Fetch remote US jobs from selected platforms (no local server).
+ * Fetch remote marketing jobs open to the selected EU countries (no local server).
  * @param {{
  *   sites: string[],
+ *   countries: string[],
  *   title: string,
- *   stack: string,
+ *   skills: string,
  *   count: number,
  *   datePreset?: string,
  *   years?: number | "",
- *   jobType?: "fulltime" | "contract" | "",
+ *   jobType?: "fulltime" | "contract" | "both" | "",
  *   downloaded?: { has(job): boolean, recentCount(site: string, hours: number): number },
  *   onProgress?: (msg: string) => void
  * }} opts
@@ -55,8 +37,9 @@ const SCRAPERS = {
  */
 export async function scrapeJobs({
   sites,
+  countries,
   title,
-  stack,
+  skills,
   count,
   datePreset,
   years,
@@ -65,12 +48,13 @@ export async function scrapeJobs({
   onProgress,
 }) {
   const titleQ = (title || "").trim();
-  const stackQ = (stack || "").trim();
-  // Boards search title + stack, so their full-text search checks the stack
-  // on the whole posting. Empty title/stack → broad remote search.
-  const searchTerm = [titleQ, stackQ].filter(Boolean).join(" ").trim();
+  const skillsQ = (skills || "").trim();
   if (!sites?.length) {
     throw new Error("Select at least one platform");
+  }
+  const countryCodes = cleanCountryCodes(countries);
+  if (!countryCodes.length) {
+    throw new Error("Select at least one country");
   }
 
   const preset = resolveDatePreset(datePreset);
@@ -89,9 +73,9 @@ export async function scrapeJobs({
       // Jobs downloaded before may fill this board's first results again
       const repeats = downloaded ? downloaded.recentCount(site, preset.hoursOld) : 0;
       const jobs = await fn({
-        searchTerm,
         title: titleQ,
-        stack: stackQ,
+        skills: skillsQ,
+        countries: countryCodes,
         resultsWanted: Math.min(400, resultsWanted + repeats),
         datePreset: preset.id,
         years,
@@ -107,7 +91,7 @@ export async function scrapeJobs({
     }
   }
 
-  // Each scraper already applied the stack while paging, so Count holds
+  // Each scraper already applied the skills while paging, so Count holds
   let jobs = filterByTitle(all, titleQ);
   for (const job of jobs) {
     if (job.years_required == null || job.years_required === "") {
@@ -117,13 +101,12 @@ export async function scrapeJobs({
   }
   jobs = jobs.filter((job) => acceptJob(job, { years, jobType }));
 
-  // One row per title + company, across all platforms (first one wins)
+  // One row per title + company, across all platforms and countries (first one wins)
   const seen = new Set();
   jobs = jobs.filter((j) => {
     const title = normalizeWords(j.title);
     const company = normalizeWords(j.company);
-    // Turing lists every role under its own name: there the link is the identity
-    const key = title && company && j.site !== "turing" ? `${title}|${company}` : j.job_url;
+    const key = title && company ? `${title}|${company}` : j.job_url;
     if (!key) return true;
     if (seen.has(key)) return false;
     seen.add(key);

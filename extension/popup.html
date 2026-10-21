@@ -3,82 +3,39 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>JobBridge Fetch</title>
+    <title>JobBridge EU</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <header class="brand">
       <span class="mark" aria-hidden="true">JB</span>
       <div>
-        <h1>JobBridge</h1>
-        <p class="sub">Remote · US · no local server</p>
+        <h1>JobBridge EU</h1>
+        <p class="sub">Remote · EU · marketing · no local server</p>
       </div>
     </header>
 
     <form id="fetch-form" autocomplete="off">
       <fieldset class="platforms">
         <legend>Platforms</legend>
-        <div class="pick">
-          <button type="button" class="link" data-pick="all">All</button>
-          <button type="button" class="link" data-pick="none">None</button>
-        </div>
-        <label class="check">
-          <input type="checkbox" name="site" value="linkedin" checked />
-          LinkedIn <span class="hint">(remote US)</span>
-        </label>
         <label class="check">
           <input type="checkbox" name="site" value="indeed" checked />
-          Indeed
-        </label>
-        <label class="check">
-          <input type="checkbox" name="site" value="wellfound" checked />
-          Wellfound
-        </label>
-        <label class="check">
-          <input type="checkbox" name="site" value="glassdoor" checked />
-          Glassdoor
-        </label>
-        <label class="check">
-          <input type="checkbox" name="site" value="zip_recruiter" checked />
-          ZipRecruiter
-        </label>
-        <label class="check">
-          <input type="checkbox" name="site" value="jobright" checked />
-          Jobright
-        </label>
-        <label class="check">
-          <input type="checkbox" name="site" value="dice" checked />
-          Dice
-        </label>
-        <label class="check">
-          <input type="checkbox" name="site" value="himalayas" checked />
-          Himalayas
-        </label>
-        <label class="check">
-          <input type="checkbox" name="site" value="jobicy" checked />
-          Jobicy
-        </label>
-        <label class="check">
-          <input type="checkbox" name="site" value="jobspresso" checked />
-          Jobspresso
-        </label>
-        <label class="check">
-          <input type="checkbox" name="site" value="builtin" checked />
-          Built In
-        </label>
-        <label class="check">
-          <input type="checkbox" name="site" value="workatastartup" />
-          <span>Work at a Startup <span class="hint">(sign in)</span></span>
-        </label>
-        <label class="check">
-          <input type="checkbox" name="site" value="turing" />
-          <span>Turing <span class="hint">(contract)</span></span>
-        </label>
-        <label class="check">
-          <input type="checkbox" name="site" value="hackernews" checked />
-          HN Who's hiring
+          Indeed <span class="hint">(remote)</span>
         </label>
       </fieldset>
+
+      <details class="countries" id="countries">
+        <summary>
+          <span class="summary-label">Countries</span>
+          <span id="country-summary" class="hint"></span>
+        </summary>
+        <div class="pick">
+          <button type="button" class="link" data-countries="eu">All EU</button>
+          <button type="button" class="link" data-countries="none">None</button>
+        </div>
+        <div id="country-list" class="country-grid"></div>
+        <p id="country-note" class="hint block-note" hidden></p>
+      </details>
 
       <label class="field">
         <span>Count</span>
@@ -105,7 +62,7 @@
         <span>Type</span>
         <select id="job_type" name="job_type">
           <option value="fulltime" selected>Full time</option>
-          <option value="contract">Contract</option>
+          <option value="contract">Contract / freelance</option>
           <option value="both">Both (full time + contract)</option>
         </select>
       </label>
@@ -119,12 +76,13 @@
           min="0"
           max="40"
           step="0.5"
-          placeholder="e.g. 5 (optional)"
+          placeholder="e.g. 3 (optional)"
         />
       </label>
       <p class="hint block">
-        Enter 5 to keep jobs that ask for 5.5 years or fewer
-        (“5+ years experience”). Jobs that don’t state years stay.
+        Enter 3 to keep jobs that ask for 3.5 years or fewer
+        (“3+ years experience”, “mindestens 3 Jahre Berufserfahrung”).
+        Jobs that don’t state years stay.
       </p>
 
       <label class="field">
@@ -133,17 +91,22 @@
           id="title"
           name="title"
           type="text"
-          placeholder="e.g. Software Engineer (optional)"
+          placeholder="Any marketing role (optional)"
         />
       </label>
+      <p class="hint block">
+        Empty: any marketing role (SEO, SEA/PPC, content, CRM, brand, social,
+        PR…). Separate titles with commas to get any of them, e.g.
+        “SEO Manager, Content Marketing”.
+      </p>
 
       <label class="field">
-        <span>Stack</span>
+        <span>Skills</span>
         <input
-          id="stack"
-          name="stack"
+          id="skills"
+          name="skills"
           type="text"
-          placeholder="e.g. React TypeScript"
+          placeholder="e.g. HubSpot Google Ads (optional)"
         />
       </label>
 

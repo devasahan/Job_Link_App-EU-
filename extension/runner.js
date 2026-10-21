@@ -1,6 +1,7 @@
 import { scrapeJobs } from "./scrapers/index.js";
 import { resolveDatePreset } from "./scrapers/util.js";
 import { loadDownloaded, rememberDownloaded } from "./scrapers/history.js";
+import { countryName, describeCountries } from "./scrapers/countries.js";
 
 const statusEl = document.getElementById("status");
 const logEl = document.getElementById("log");
@@ -24,10 +25,10 @@ function downloadExcel(jobs) {
     Title: j.title ?? "",
     Company: j.company ?? "",
     Location: j.location ?? "",
+    Country: j.country ? countryName(j.country) : "",
     Site: j.site ?? "",
     Posted: j.date_posted ?? "",
     Remote: j.is_remote ?? "",
-    "Easy Apply": j.easy_apply ?? "",
     "Listing type": j.listing_type ?? "",
     "Experience years":
       j.years_required == null || j.years_required === ""
@@ -53,7 +54,7 @@ function downloadExcel(jobs) {
   XLSX.utils.book_append_sheet(book, sheet, "Jobs");
 
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-  XLSX.writeFile(book, `jobbridge-remote-us-${stamp}.xlsx`);
+  XLSX.writeFile(book, `jobbridge-eu-marketing-${stamp}.xlsx`);
 }
 
 async function run() {
@@ -63,13 +64,18 @@ async function run() {
     return;
   }
 
-  const { title, stack, count, sites, datePreset, years, jobType, skipDownloaded } = pendingFetch;
+  const { title, skills, count, sites, countries, datePreset, years, jobType, skipDownloaded } =
+    pendingFetch;
   await chrome.storage.local.remove("pendingFetch");
 
   const preset = resolveDatePreset(datePreset);
 
   const type = ["contract", "both"].includes(jobType) ? jobType : "fulltime";
-  const typeLabel = { fulltime: "Full time", contract: "Contract", both: "Full time + contract" }[type];
+  const typeLabel = {
+    fulltime: "Full time",
+    contract: "Contract / freelance",
+    both: "Full time + contract",
+  }[type];
   const yearsLabel =
     years === "" || years == null
       ? "—"
@@ -77,15 +83,16 @@ async function run() {
   // Older settings have no skipDownloaded: skipping is the default
   const downloaded = skipDownloaded === false ? null : await loadDownloaded();
   log(
-    `Platforms: ${sites.join(", ")}\nCount (per site): ${count}\nPosted: ${preset.label}\nType: ${typeLabel}\nYears: ${yearsLabel}\nTitle: ${title || "—"}\nStack: ${stack || "—"}\nFilters: remote · US\nAlready downloaded: ${downloaded ? `skipped (${downloaded.size} remembered)` : "included"}`
+    `Platforms: ${sites.join(", ")}\nCountries: ${describeCountries(countries)}\nCount (per site): ${count}\nPosted: ${preset.label}\nType: ${typeLabel}\nYears: ${yearsLabel}\nTitle: ${title || "any marketing role"}\nSkills: ${skills || "—"}\nFilters: remote · open to the selected countries\nAlready downloaded: ${downloaded ? `skipped (${downloaded.size} remembered)` : "included"}`
   );
-  setStatus("Fetching remote US jobs from selected platforms…");
+  setStatus("Fetching remote EU marketing jobs from selected platforms…");
 
   try {
     const { jobs, errors, skipped } = await scrapeJobs({
       sites,
+      countries,
       title,
-      stack,
+      skills,
       count,
       datePreset: preset.id,
       years: years === "" || years == null ? "" : Number(years),

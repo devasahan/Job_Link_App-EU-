@@ -1,14 +1,20 @@
 import { downloadedCount, forgetDownloaded } from "./scrapers/history.js";
+import { ALL_COUNTRIES, EU_CODES, describeCountries } from "./scrapers/countries.js";
+import { BOARD_COUNTRIES } from "./scrapers/index.js";
 
 const form = document.getElementById("fetch-form");
 const statusEl = document.getElementById("status");
 const okBtn = document.getElementById("ok-btn");
+const countryList = document.getElementById("country-list");
+const countrySummary = document.getElementById("country-summary");
+const countryNote = document.getElementById("country-note");
 
 const STORAGE_KEYS = [
   "title",
-  "stack",
+  "skills",
   "count",
   "sites",
+  "countries",
   "date_preset",
   "years",
   "job_type",
@@ -17,9 +23,10 @@ const STORAGE_KEYS = [
 ];
 
 // Boards the popup had before known_sites was saved
-const FIRST_SITES = ["linkedin", "indeed", "wellfound", "glassdoor", "zip_recruiter", "jobright", "dice"];
+const FIRST_SITES = ["indeed"];
 
 const siteBoxes = () => [...form.querySelectorAll('input[name="site"]')];
+const countryBoxes = () => [...form.querySelectorAll('input[name="country"]')];
 
 function setStatus(message, kind = "") {
   statusEl.textContent = message || "";
@@ -32,10 +39,58 @@ function selectedSites() {
   );
 }
 
+function selectedCountries() {
+  return countryBoxes()
+    .filter((el) => el.checked)
+    .map((el) => el.value);
+}
+
+/** Countries at least one ticked board can search. */
+function coveredCountries() {
+  const covered = new Set();
+  for (const site of selectedSites()) {
+    for (const code of BOARD_COUNTRIES[site] || []) covered.add(code);
+  }
+  return covered;
+}
+
+function renderCountries() {
+  for (const { code, name } of ALL_COUNTRIES) {
+    const label = document.createElement("label");
+    label.className = "check";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.name = "country";
+    box.value = code;
+    // EU-27 by default; the UK, Switzerland and Norway are extras
+    box.checked = EU_CODES.includes(code);
+    label.append(box, ` ${name}`);
+    countryList.append(label);
+  }
+}
+
+/** Summary line, greyed-out countries no ticked board covers, and the note about them. */
+function refreshCountries() {
+  const covered = coveredCountries();
+  const uncovered = [];
+  for (const box of countryBoxes()) {
+    const off = !covered.has(box.value);
+    box.parentElement.classList.toggle("uncovered", off);
+    box.parentElement.title = off ? "No ticked platform has a site for this country" : "";
+    if (off && box.checked) uncovered.push(box.parentElement.textContent.trim());
+  }
+  const picked = selectedCountries();
+  countrySummary.textContent = picked.length ? describeCountries(picked) : "none";
+  countryNote.hidden = !uncovered.length;
+  countryNote.textContent = uncovered.length
+    ? `Not searched (no site on the ticked platforms): ${uncovered.join(", ")}.`
+    : "";
+}
+
 async function restoreForm() {
   const saved = await chrome.storage.local.get(STORAGE_KEYS);
   if (saved.title) form.title.value = saved.title;
-  if (saved.stack) form.stack.value = saved.stack;
+  if (saved.skills) form.skills.value = saved.skills;
   if (saved.count) form.count.value = String(saved.count);
   if (saved.date_preset === "today" || saved.date_preset === "3days") {
     form.date_preset.value = saved.date_preset;
@@ -54,6 +109,12 @@ async function restoreForm() {
       if (known.includes(el.value)) el.checked = saved.sites.includes(el.value);
     });
   }
+  if (Array.isArray(saved.countries) && saved.countries.length) {
+    countryBoxes().forEach((el) => {
+      el.checked = saved.countries.includes(el.value);
+    });
+  }
+  refreshCountries();
 }
 
 const countEl = document.getElementById("downloaded-count");
@@ -71,20 +132,25 @@ forgetBtn.addEventListener("click", async () => {
   setStatus("Forgot downloaded jobs: the next run includes them again.");
 });
 
-form.querySelectorAll("[data-pick]").forEach((button) => {
+form.querySelectorAll("[data-countries]").forEach((button) => {
   button.addEventListener("click", () => {
-    const all = button.dataset.pick === "all";
-    siteBoxes().forEach((el) => {
-      el.checked = all;
+    const eu = button.dataset.countries === "eu";
+    countryBoxes().forEach((el) => {
+      el.checked = eu && EU_CODES.includes(el.value);
     });
+    refreshCountries();
   });
+});
+
+form.addEventListener("change", (event) => {
+  if (event.target.name === "site" || event.target.name === "country") refreshCountries();
 });
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const title = form.title.value.trim();
-  const stack = form.stack.value.trim();
+  const skills = form.skills.value.trim();
   const count = Math.max(1, Math.min(200, Number(form.count.value) || 50));
   const datePreset =
     form.date_preset.value === "3days" ? "3days" : "today";
@@ -99,10 +165,22 @@ form.addEventListener("submit", async (event) => {
     }
   }
   const sites = selectedSites();
+  const countries = selectedCountries();
   const skipDownloaded = form.skip_downloaded.checked;
 
   if (!sites.length) {
     setStatus("Select at least one platform.", "error");
+    return;
+  }
+  if (!countries.length) {
+    setStatus("Select at least one country.", "error");
+    document.getElementById("countries").open = true;
+    return;
+  }
+  const covered = coveredCountries();
+  if (!countries.some((code) => covered.has(code))) {
+    setStatus("The ticked platforms have no site for any selected country.", "error");
+    document.getElementById("countries").open = true;
     return;
   }
 
@@ -111,15 +189,16 @@ form.addEventListener("submit", async (event) => {
 
   await chrome.storage.local.set({
     title,
-    stack,
+    skills,
     count,
     sites,
+    countries,
     date_preset: datePreset,
     years,
     job_type: jobType,
     known_sites: siteBoxes().map((el) => el.value),
     skip_downloaded: skipDownloaded,
-    pendingFetch: { title, stack, count, sites, datePreset, years, jobType, skipDownloaded },
+    pendingFetch: { title, skills, count, sites, countries, datePreset, years, jobType, skipDownloaded },
   });
 
   await chrome.tabs.create({
@@ -129,5 +208,6 @@ form.addEventListener("submit", async (event) => {
   window.close();
 });
 
+renderCountries();
 restoreForm();
 showDownloaded();

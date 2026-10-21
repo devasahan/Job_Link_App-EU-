@@ -112,6 +112,47 @@ form {
   color: var(--muted);
 }
 
+.countries {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.countries summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.countries[open] summary {
+  margin-bottom: 6px;
+}
+
+.country-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 10px;
+}
+
+.country-grid .check {
+  padding: 2px 0;
+  font-size: 12px;
+}
+
+.country-grid .check.uncovered {
+  color: var(--muted);
+}
+
+.block-note {
+  margin: 6px 0 0;
+  line-height: 1.35;
+}
+
 .check {
   display: flex;
   align-items: center;

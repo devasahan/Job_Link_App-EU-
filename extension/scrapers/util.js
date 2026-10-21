@@ -1,6 +1,7 @@
 /** Shared helpers for JobBridge extension scrapers. */
 
 import "./title-match.js";
+import "./marketing.js";
 import "./job-filters.js";
 
 export const DATE_PRESETS = {
@@ -8,25 +9,11 @@ export const DATE_PRESETS = {
     id: "today",
     label: "Today (24 hours)",
     hoursOld: 24,
-    glassdoorFromAge: 1,
-    // ZipRecruiter HTML only accepts 1 | 5 | 10 | 30 (not 3)
-    ziprecruiterDays: 1,
-    // Dice filters.postedDate facet values
-    dicePostedDate: "ONE",
-    jobrightDaysAgo: 1,
-    // Built In daysSinceUpdated: 1 | 3 | 7 | 30
-    builtinDays: 1,
   },
   "3days": {
     id: "3days",
     label: "3 days (72 hours)",
     hoursOld: 72,
-    glassdoorFromAge: 3,
-    // nearest allowed ZR value that covers ~72h
-    ziprecruiterDays: 5,
-    dicePostedDate: "THREE",
-    jobrightDaysAgo: 3,
-    builtinDays: 3,
   },
 };
 
@@ -37,34 +24,13 @@ export function resolveDatePreset(id) {
 export const BLOCK_TAG_RE =
   /<\/?(?:p|div|li|ul|ol|br|h[1-6]|tr|td|th|table|section|article|header|footer|blockquote|pre|dd|dt)\b[^>]*>/gi;
 
-/**
- * Cities whose country code is also a US state or time zone, so "Berlin, DE"
- * and "Lisbon, PT" aren't read as Delaware or Pacific Time.
- */
-export const CITY_COUNTRY = {
-  DE: /\b(?:berlin|munich|münchen|hamburg|frankfurt|cologne|köln|stuttgart|düsseldorf|dusseldorf|leipzig|dresden)\b/i,
-  IN: /\b(?:bangalore|bengaluru|hyderabad|pune|mumbai|delhi|chennai|gurgaon|gurugram|noida|kolkata|ahmedabad)\b/i,
-  IL: /\b(?:tel aviv|jerusalem|haifa|herzliya)\b/i,
-  CA: /\b(?:toronto|vancouver|montr[eé]al|ottawa|calgary|edmonton|winnipeg|qu[eé]bec)\b/i,
-  CO: /\b(?:bogot[aá]|medell[ií]n)\b/i,
-  AR: /\b(?:buenos aires|c[oó]rdoba)\b/i,
-  PT: /\b(?:lisbon|lisboa|porto|braga|coimbra)\b/i,
-  MT: /\b(?:valletta|sliema)\b/i,
-  MA: /\b(?:casablanca|rabat)\b/i,
-  ID: /\b(?:jakarta|bandung)\b/i,
-  AL: /\btirana\b/i,
-  AZ: /\bbaku\b/i,
-  TN: /\btunis\b/i,
-  ET: /\baddis ababa\b/i,
-};
-
 export function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
 export function stripHtml(html) {
   if (!html) return "";
-  // Keep "<li>React</li><li>AWS</li>" from becoming "ReactAWS"
+  // Keep "<li>SEO</li><li>SEA</li>" from becoming "SEOSEA"
   const spaced = String(html).replace(BLOCK_TAG_RE, " $&");
   const doc = new DOMParser().parseFromString(spaced, "text/html");
   return (doc.body.textContent || "").replace(/\s+/g, " ").trim();
@@ -74,13 +40,16 @@ export function formatLocation(parts) {
   return parts.filter(Boolean).join(", ");
 }
 
-/** Every title word (Sr = Senior, Front-End = Frontend, …) must be in the job title. */
+/**
+ * Every word of one comma-separated title phrase (Sr = Senior, SEO = search
+ * engine optimisation, …) is in the job title. No title: any marketing role.
+ */
 export function titleMatches(jobTitle, title) {
+  if (!String(title || "").trim()) return globalThis.jbIsMarketingTitle(jobTitle);
   return globalThis.jbTitleMatches(jobTitle, title);
 }
 
 export function filterByTitle(jobs, title) {
-  if (!String(title || "").trim()) return jobs;
   return jobs.filter((j) => titleMatches(j.title, title));
 }
 
@@ -111,15 +80,15 @@ export function acceptJob(job, { years, jobType } = {}) {
 }
 
 /**
- * Everything a board's results must pass. Pass `stack` only for boards that
- * return the job description; boards searched with the stack words already
+ * Everything a board's results must pass. Pass `skills` only for boards that
+ * return the job description; boards searched with the skill words already
  * checked the whole posting.
  */
-export function filterByRequest(jobs, { title, stack, years, jobType, hoursOld } = {}) {
+export function filterByRequest(jobs, { title, skills, years, jobType, hoursOld } = {}) {
   let out = jobs;
   if (hoursOld) out = filterByHoursOld(out, hoursOld);
-  if (title) out = filterByTitle(out, title);
-  if (stack) out = filterByStack(out, stack);
+  out = filterByTitle(out, title);
+  if (skills) out = filterBySkills(out, skills);
   return out.filter((job) => acceptJob(job, { years, jobType }));
 }
 
@@ -138,17 +107,10 @@ export function withinHours(datePosted, hoursOld) {
   return t >= cutoff;
 }
 
-/** Every stack word must be a whole word in the title or description. */
-export function filterByStack(jobs, stack) {
-  if (!String(stack || "").trim()) return jobs;
-  return jobs.filter((j) => globalThis.jbStackMatches(j, stack));
-}
-
-/** A site tab that stopped partway (blocked, timed out) still returns its jobs: say so. */
-export function reportStoppedEarly(onProgress, site, response) {
-  if (response?.error && response.jobs?.length) {
-    onProgress?.(`${site} stopped early, results may be incomplete: ${response.error}`);
-  }
+/** Every skill word must be a whole word in the title or description. */
+export function filterBySkills(jobs, skills) {
+  if (!String(skills || "").trim()) return jobs;
+  return jobs.filter((j) => globalThis.jbSkillsMatch(j, skills));
 }
 
 /** Keep jobs whose date_posted is within hoursOld (when a parseable date exists). */
@@ -168,12 +130,13 @@ function resolveYearsRequired(partial) {
 
 export function normalizeJob(partial) {
   const isRemote = partial.is_remote;
-  const easyApply = partial.easy_apply;
   const description = partial.description || "";
   return {
     title: partial.title || "",
     company: partial.company || "",
     location: partial.location || "",
+    // ISO 3166 alpha-2 code of the country the job is open to ("DE")
+    country: partial.country || "",
     site: partial.site || "",
     listing_type: partial.listing_type || "",
     date_posted: partial.date_posted || "",
@@ -183,21 +146,9 @@ export function normalizeJob(partial) {
         : isRemote === false || isRemote === "No"
           ? "No"
           : partial.is_remote || "",
-    easy_apply:
-      easyApply === true || easyApply === "Yes"
-        ? "Yes"
-        : easyApply === false || easyApply === "No"
-          ? "No"
-          : partial.easy_apply || "",
     job_url: partial.job_url || "",
     job_url_direct: partial.job_url_direct || "",
     description,
     years_required: resolveYearsRequired({ ...partial, description }),
   };
-}
-
-/** Detect remote from title / location / description text. */
-export function detectRemote(...parts) {
-  const blob = parts.filter(Boolean).join(" ").toLowerCase();
-  return /\b(remote|work from home|\bwfh\b)\b/i.test(blob);
 }

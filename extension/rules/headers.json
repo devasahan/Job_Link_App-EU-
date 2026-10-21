@@ -22,64 +22,13 @@
     },
     "condition": {
       "urlFilter": "||apis.indeed.com/",
-      "excludedInitiatorDomains": ["indeed.com"],
-      "resourceTypes": ["xmlhttprequest", "other"]
-    }
-  },
-  {
-    "id": 6,
-    "priority": 1,
-    "action": {
-      "type": "modifyHeaders",
-      "requestHeaders": [
-        {
-          "header": "User-Agent",
-          "operation": "set",
-          "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
-        },
-        {
-          "header": "Origin",
-          "operation": "set",
-          "value": "https://jobright.ai"
-        },
-        {
-          "header": "Referer",
-          "operation": "set",
-          "value": "https://jobright.ai/"
-        }
+      "excludedInitiatorDomains": [
+        "indeed.com"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "other"
       ]
-    },
-    "condition": {
-      "urlFilter": "||swan-api.jobright.ai/",
-      "excludedInitiatorDomains": ["jobright.ai"],
-      "resourceTypes": ["xmlhttprequest", "other"]
-    }
-  },
-  {
-    "id": 8,
-    "priority": 1,
-    "action": {
-      "type": "modifyHeaders",
-      "requestHeaders": [
-        {
-          "header": "User-Agent",
-          "operation": "set",
-          "value": "JobBridgeFetch/1.12 (personal job search)"
-        },
-        {
-          "header": "Origin",
-          "operation": "remove"
-        },
-        {
-          "header": "Referer",
-          "operation": "remove"
-        }
-      ]
-    },
-    "condition": {
-      "urlFilter": "||himalayas.app/jobs/api",
-      "excludedInitiatorDomains": ["himalayas.app"],
-      "resourceTypes": ["xmlhttprequest", "other"]
     }
   }
 ]

@@ -18,6 +18,9 @@ export function blockedError(site, status, bodyText = "") {
       `Glassdoor HTTP ${status} (blocked). Open https://www.glassdoor.com in a normal tab, pass any security check, then retry.`
     );
   }
+  if (site === "indeed" && status === 429) {
+    return new Error("Indeed is limiting requests (HTTP 429). Wait a few minutes, then retry.");
+  }
   if (site === "indeed") {
     return new Error(
       `Indeed HTTP ${status}. Reload the extension so header rules install (Indeed requires a special User-Agent).`
