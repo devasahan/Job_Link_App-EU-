@@ -1,5 +1,6 @@
 import { scrapeJobs } from "./scrapers/index.js";
 import { resolveDatePreset } from "./scrapers/util.js";
+import { moreResultsHint } from "./hint.js";
 import { loadDownloaded, rememberDownloaded } from "./scrapers/history.js";
 import { cleanAbroadCodes, countryName, describeCountries } from "./scrapers/countries.js";
 
@@ -58,17 +59,15 @@ function downloadExcel(jobs) {
   XLSX.writeFile(book, `jobbridge-eu-developers-${stamp}.xlsx`);
 }
 
-/** Fewer jobs than Count: the settings that would widen the next run. */
-function moreResultsHint({ found, count, preset, title, abroad, type }) {
-  if (found >= Number(count)) return "";
-  const tips = [];
-  if (preset.id !== "month") tips.push("a longer Posted window (7 or 30 days)");
-  if (String(title || "").trim()) {
-    tips.push("an empty Title (every developer role, searched in each country's own language)");
+/** The hint, or after a board stopped early, a reminder that the run wasn't complete. */
+function logMoreResults(found, settings, incomplete) {
+  if (incomplete.length) {
+    const boards = incomplete.map((site) => site.charAt(0).toUpperCase() + site.slice(1));
+    log(`${boards.join(", ")} stopped early: wait a few minutes and run again before widening the search.`);
+    return;
   }
-  if (!cleanAbroadCodes(abroad).length) tips.push("ticking Employers abroad");
-  if (type !== "both") tips.push("Type: Both");
-  return tips.length ? `Fewer than ${count} found. For more, try ${tips.join(", ")}.` : "";
+  const more = moreResultsHint({ found, ...settings });
+  if (more) log(more);
 }
 
 async function run() {
@@ -102,7 +101,7 @@ async function run() {
   setStatus("Fetching remote developer jobs open to the EU from selected platforms…");
 
   try {
-    const { jobs, errors, skipped } = await scrapeJobs({
+    const { jobs, errors, skipped, incomplete } = await scrapeJobs({
       sites,
       countries,
       abroad,
@@ -116,6 +115,7 @@ async function run() {
       onProgress: (msg) => log(msg),
     });
     if (skipped) log(`Skipped ${skipped} job(s) you already downloaded`);
+    const settings = { count, preset, title, stack, years, abroad, type };
 
     if (errors.length) {
       log(`Warnings:\n- ${errors.join("\n- ")}`);
@@ -131,9 +131,8 @@ async function run() {
             : "No jobs found for those filters.",
           "error"
         );
-        const more = moreResultsHint({ found: 0, count, preset, title, abroad, type });
-        if (more && !errors.length) log(more);
       }
+      if (!errors.length) logMoreResults(0, settings, incomplete);
       return;
     }
 
@@ -141,8 +140,7 @@ async function run() {
     await rememberDownloaded(jobs);
     setStatus(`Downloaded ${jobs.length}${downloaded ? " new" : ""} job(s) as Excel.`, "success");
     log(`Done — ${jobs.length} rows written to .xlsx`);
-    const more = moreResultsHint({ found: jobs.length, count, preset, title, abroad, type });
-    if (more) log(more);
+    logMoreResults(jobs.length, settings, incomplete);
   } catch (err) {
     const msg = err?.message || String(err);
     setStatus(msg, "error");

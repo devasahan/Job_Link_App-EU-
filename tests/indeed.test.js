@@ -109,6 +109,7 @@ test("search terms: each title, or developer in English and the local language",
   assert.deepEqual(searchTerms("Java Dev", "", "BE"), ["Java Dev", "Java développeur", "Java ontwikkelaar"]);
   assert.deepEqual(searchTerms("Software Engineer", "", "IE"), ["Software Engineer"]);
   assert.deepEqual(searchTerms("DevOps", "", "DE"), ["DevOps"]);
+  assert.deepEqual(searchTerms("Java Programmer", "", "PT"), ["Java Programmer", "Java programador"]);
   // Employers abroad: each search also names where the job may be held
   assert.deepEqual(searchTerms("Backend Developer", "Go", "US", { abroad: true }), [
     "Backend Developer Go Europe",
@@ -412,4 +413,40 @@ test("the run log says what each check left out", async () => {
     ),
     log.join("\n")
   );
+});
+
+test("a run that stopped early says so, so the runner doesn't advise wider settings", async () => {
+  mockFetch((country) => (country === "AT" ? page([rawJob("at1", { location: { countryCode: "AT" } })]) : new Response("slow down", { status: 429 })));
+  const stopped = await scrapeIndeed({ countries: ["AT", "DE"], resultsWanted: 10, datePreset: "today" });
+  assert.equal(stopped.length, 1);
+  assert.equal(stopped.incomplete, true);
+  mockFetch(() => page([rawJob("de1")]));
+  const done = await scrapeIndeed({ countries: ["DE", "HR"], resultsWanted: 10, datePreset: "today" });
+  assert.equal(done.incomplete, false);
+});
+
+test("a typed title's local-language search runs only while the country is short of Count", async () => {
+  mockFetch(() => page([rawJob("de1", { title: "Backend Developer" })]));
+  await scrapeIndeed({ countries: ["DE"], title: "Backend Developer", resultsWanted: 1, datePreset: "today" });
+  assert.deepEqual(calls.map((c) => c.query.match(/what: "([^"]*)"/)[1]), ["Backend Developer"]);
+  calls = [];
+  await scrapeIndeed({ countries: ["DE"], title: "Backend Developer", resultsWanted: 5, datePreset: "today" });
+  assert.deepEqual(calls.map((c) => c.query.match(/what: "([^"]*)"/)[1]), ["Backend Developer", "Backend Entwickler"]);
+});
+
+test("a country that fails partway still gets its scanned → kept line", async () => {
+  mockFetch((country, call) =>
+    /Entwickler/.test(call.query) ? new Response("down", { status: 500 }) : page([rawJob("de1")])
+  );
+  const log = [];
+  await scrapeIndeed({ countries: ["DE"], title: "Backend Developer", resultsWanted: 5, datePreset: "today", onProgress: (m) => log.push(m) });
+  assert.ok(log.includes("Indeed Germany: 1 scanned → 1 kept (stopped)"), log.join("\n"));
+});
+
+test("a page whose jobs were all seen under another search still ends the paging when it is too old", async () => {
+  // Indeed ignores the date filter (legacy shape): both searches return the same old jobs with a next cursor
+  const old = Array.from({ length: 3 }, (_, i) => rawJob(`old${i}`, { dateOnIndeed: Date.now() - 40 * HOUR }));
+  mockFetch(() => page(old, "more"));
+  await scrapeIndeed({ countries: ["DE"], title: "Backend Developer", resultsWanted: 5, datePreset: "today" });
+  assert.deepEqual(calls.map((c) => c.query.match(/what: "([^"]*)"/)[1]), ["Backend Developer", "Backend Entwickler"]);
 });

@@ -2,13 +2,14 @@
  * Jobs already downloaded, remembered in this browser (chrome.storage.local)
  * so later runs can skip them. A job is known by its link and by its title +
  * company, so the same job found on another board later is a repeat too.
- * Entries are kept for 30 days; the date windows are at most 3 days.
+ * Entries are kept for 31 days, a day longer than the longest Posted window
+ * (30 days), so a job seen in any window is still known.
  */
 
 import "./title-match.js";
 
 const STORE_KEY = "downloadedJobs";
-const KEEP_MS = 30 * 86400e3;
+const KEEP_MS = 31 * 86400e3;
 // Tracking parameters that change between visits to the same job
 const TRACKING_PARAM_RE = /^(?:utm_\w+|trk|trackingId|refId|ref|src|source|from|gh_src|lever-source)$/i;
 

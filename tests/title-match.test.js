@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import "../extension/scrapers/title-match.js";
+import "../extension/scrapers/developer.js";
 
 const matches = (title, query) => globalThis.jbTitleMatches(title, query);
 const stack = (job, query) => globalThis.jbStackMatches(job, query);
@@ -21,6 +22,10 @@ test("developer, engineer and software in EU languages read as the English words
   assert.equal(words("Softwareentwicklerin"), "software developer");
   assert.equal(words("Développeuse Full-Stack H/F"), "developer fullstack h f");
   assert.equal(words("Programista Python"), "developer python");
+  assert.equal(words("Programador Java"), "developer java");
+  assert.equal(words("Programmeur PHP"), "developer php");
+  assert.equal(words("Programmierer (m/w/d)"), "developer m w d");
+  assert.equal(words("Java Programmer"), "java programmer");
   assert.equal(words("Senior Systemutvecklare"), "senior system developer");
   assert.equal(words("Ingénieur logiciel"), "engineer software");
   assert.equal(words("Ohjelmistokehittäjä"), "software developer");
@@ -42,6 +47,14 @@ test("next to another word, developer, engineer and programmer are one role", ()
   assert.ok(matches("Développeur logiciel", "Software Engineer"));
   assert.ok(matches("Backend Engineer", "Backend Developer"));
   assert.ok(matches("Java Programmer", "Java Developer"));
+  assert.ok(matches("Programador Java", "Java Developer"));
+  assert.ok(matches("Senior Software Engineer", "Senior Developer"));
+  // Only for software roles: seniority words don't make a sales or hardware job one
+  assert.equal(matches("Senior Sales Engineer", "Senior Developer"), false);
+  assert.equal(matches("Junior Network Engineer", "Junior Developer"), false);
+  assert.equal(matches("Senior Projektentwickler (m/w/d)", "Senior Engineer"), false);
+  assert.equal(matches("Business Developer Software (m/w/d)", "Software Engineer"), false);
+  assert.equal(matches("Remote Sales Engineer", "Remote Developer"), false);
   // Alone, each stays itself
   assert.equal(matches("Sales Engineer", "Developer"), false);
   assert.equal(matches("Developer Advocate", "Engineer"), false);

@@ -37,6 +37,7 @@ export const BOARD_COUNTRIES = {
  * }} opts
  * With `downloaded`, jobs from earlier downloads are left out (counted in
  * `skipped`) and each board is asked for more, so Count new jobs still fit.
+ * `incomplete` names the boards that stopped early.
  */
 export async function scrapeJobs({
   sites,
@@ -66,6 +67,8 @@ export async function scrapeJobs({
   const resultsWanted = Math.max(1, Math.min(200, Number(count) || 50));
   const all = [];
   const errors = [];
+  // Boards that stopped early (blocked, rate-limited, a country failing)
+  const incomplete = [];
 
   for (const site of sites) {
     const fn = SCRAPERS[site];
@@ -89,6 +92,7 @@ export async function scrapeJobs({
         onProgress,
       });
       all.push(...jobs);
+      if (jobs.incomplete) incomplete.push(site);
       onProgress?.(`${site}: ${jobs.length} job(s)`);
     } catch (err) {
       const msg = err?.message || String(err);
@@ -133,5 +137,5 @@ export async function scrapeJobs({
     });
   }
 
-  return { jobs, errors, skipped, datePreset: preset };
+  return { jobs, errors, skipped, incomplete, datePreset: preset };
 }

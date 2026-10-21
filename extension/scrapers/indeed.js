@@ -217,20 +217,25 @@ export function requestHeaders(country) {
 /**
  * What to search on one country's Indeed: each comma-separated title (plus
  * the stack, so Indeed checks it on the whole posting) as typed and with the
- * country's own word for developer, or with no title "developer" in English
- * and the local language. For employers abroad each search also names Europe,
+ * country's own word for developer (not with `local: false`), or with no
+ * title "developer" in English and the local language. For employers abroad each search also names Europe,
  * EMEA or worldwide.
  */
-export function searchTerms(title, stack, country, { abroad = false } = {}) {
+export function searchTerms(title, stack, country, { abroad = false, local: translate = true } = {}) {
   // Titles with no usable words ("-", "(m/w/d)") are dropped, as the title check
   // drops them; gender forms are left out of the search ("Entwickler*in" → "Entwickler")
   const titles = String(title || "")
     .split(/[,;]/)
     .filter((t) => globalThis.jbTitleQueryTokens(t).length)
     .map((t) => globalThis.jbStripGender(t));
-  const local = ENGLISH_SITES.has(country) ? [] : LOCAL_TERMS[country] || [];
+  const local = !translate || ENGLISH_SITES.has(country) ? [] : LOCAL_TERMS[country] || [];
   const translated = titles.flatMap((t) =>
-    ROLE_WORD_RE.test(t) ? local.map((word) => t.replace(ROLE_WORD_RE, () => word)) : []
+    ROLE_WORD_RE.test(t)
+      ? local
+          .map((word) => t.replace(ROLE_WORD_RE, () => word))
+          // Only a search whose words the title check accepts can keep a job
+          .filter((term) => globalThis.jbTitleMatches(term, t))
+      : []
   );
   const roles = titles.length
     ? [...new Map([...titles, ...translated].map((t) => [t.toLowerCase(), t])).values()]
@@ -402,8 +407,11 @@ export async function scrapeIndeed({
     const countryMatched = [];
     const scannedBefore = scanned;
     const isAbroad = abroadSites.has(country);
-    // Every search runs: each title (and each language's word) has its own newest jobs
+    // Every search runs: each title (and each language's word) has its own newest jobs.
+    // A typed title's local-language searches only run while the country is short of Count
+    const typed = new Set(searchTerms(titleFilter, stack, country, { abroad: isAbroad, local: false }));
     for (const term of searchTerms(titleFilter, stack, country, { abroad: isAbroad })) {
+      if (titleFilter && !typed.has(term) && countryMatched.length >= resultsWanted) continue;
       let cursor = null;
       let termMatched = 0;
       for (let page = 1; page <= MAX_PAGES && termMatched < resultsWanted; page++) {
@@ -419,6 +427,7 @@ export async function scrapeIndeed({
             : err?.message || String(err);
           failures.push(`${name}: ${msg}`);
           matched.push(...countryMatched);
+          onProgress?.(`Indeed ${name}: ${scanned - scannedBefore} scanned → ${countryMatched.length} kept (stopped)`);
           // Key refused, blocked or rate-limited: the next countries would be refused too
           if (/\b(?:401|403|429)\b/.test(msg)) break countries;
           continue countries;
@@ -427,6 +436,9 @@ export async function scrapeIndeed({
         if (!results.length) break;
 
         const pageJobs = [];
+        // Results are newest first: once a whole page is too old, the rest are too
+        // (jobs already seen under another search count; their dates are the same)
+        const pageDates = results.map((row) => row?.job?.dateOnIndeed || row?.job?.datePublished).filter(Boolean);
         for (const row of results) {
           const raw = row?.job;
           if (!raw?.key || seen.has(raw.key)) continue;
@@ -465,9 +477,7 @@ export async function scrapeIndeed({
         countryMatched.push(...kept);
         termMatched += kept.length;
 
-        // Results are newest first: once a whole page is too old, the rest are too
-        const dated = pageJobs.filter((j) => j.date_posted);
-        if (dated.length && dated.every((j) => !withinHours(j.date_posted, preset.hoursOld))) {
+        if (pageDates.length && pageDates.every((ms) => !withinHours(toDatePosted(ms), preset.hoursOld))) {
           break;
         }
         cursor = search.pageInfo?.nextCursor || null;
@@ -492,7 +502,10 @@ export async function scrapeIndeed({
     onProgress?.(`Indeed stopped early, results may be incomplete: ${failures.join("; ")}`);
   }
   const leftOut = [
-    [dropped.title, titleFilter ? "not matching the title" : "not developer roles"],
+    [
+      dropped.title,
+      globalThis.jbTitleQueryPhrases(titleFilter).length ? "not matching the title" : "not developer roles",
+    ],
     [dropped.old, `older than ${preset.span}`],
     [dropped.type, "other job types"],
     [dropped.years, "asking for more years"],
@@ -510,7 +523,7 @@ export async function scrapeIndeed({
   // Newest first across countries; the same job posted in several countries
   // (title + company) counts once, the newest copy, before Count
   const seenJobs = new Set();
-  return matched
+  const jobs = matched
     .sort((a, b) => String(b.date_posted).localeCompare(String(a.date_posted)))
     .filter((j) => {
       const title = normalizeWords(j.title);
@@ -522,4 +535,7 @@ export async function scrapeIndeed({
     })
     .slice(0, resultsWanted)
     .map((j) => ({ ...j, date_posted: String(j.date_posted).slice(0, 10) }));
+  // Some countries weren't searched to the end: wider settings aren't the fix
+  jobs.incomplete = failures.some((f) => !/no site there/.test(f));
+  return jobs;
 }

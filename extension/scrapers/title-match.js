@@ -41,7 +41,7 @@
   // ("Softwareentwickler", "Backend-Entwicklerin", "systemutvecklare")
   const ROLE_WORDS = [
     [
-      /(?:entwickler(?:innen|in)?|developpeu(?:r|se)s?|desarrollador(?:a|es|as)?|desenvolvedor(?:a|es|as)?|sviluppat(?:ore|rice|ori)|ontwikkelaars?|programist(?:a|ka|ki|y)|vyvojar(?:ka|i)?|utvecklare|udvikler(?:e)?|utvikler(?:e)?|kehittaja(?:t)?|fejleszto(?:k)?|dezvoltator(?:i)?|προγραμματιστ\p{L}*)(?![\p{L}\p{N}])/gu,
+      /(?:entwickler(?:innen|in)?|developpeu(?:r|se)s?|desarrollador(?:a|es|as)?|desenvolvedor(?:a|es|as)?|sviluppat(?:ore|rice|ori)|ontwikkelaars?|programist(?:a|ka|ki|y)|programador(?:a|es|as)?|programmeu(?:r|se)s?|programmat(?:ore|rice|ori)|programmierer(?:innen|in)?|programator(?:ka|zy|i)?|programozo(?:k)?|programmerare|programmerer|programmor(?:er|ene)?|vyvojar(?:ka|i)?|utvecklare|udvikler(?:e)?|utvikler(?:e)?|kehittaja(?:t)?|fejleszto(?:k)?|dezvoltator(?:i)?|προγραμματιστ\p{L}*)(?![\p{L}\p{N}])/gu,
       " developer",
     ],
     [
@@ -157,7 +157,9 @@
 
   // Next to another word, developer, engineer and programmer name the same job
   // ("Software Engineer" = "Software Developer" = "Softwareentwickler",
-  // "Backend Developer" = "Backend Engineer"); alone each stays itself
+  // "Backend Developer" = "Backend Engineer") when the job is a software role
+  // (developer.js): "Senior Developer" doesn't find "Senior Sales Engineer".
+  // Alone each stays itself
   const ROLE_TOKENS = new Set(["developer", "engineer", "programmer"]);
 
   /** Every word of one comma-separated title is in the job title. */
@@ -170,9 +172,13 @@
     const joined = [...joinedWords(words), ...joinedWords(raw)];
     const inJoined = (t) => t.length >= 7 && joined.some((j) => j.startsWith(t));
     const found = (t) => tokenInWords(t, words) || inJoined(t);
+    // Without developer.js loaded every job counts as a software role
+    const softwareRole = () => globalThis.jbIsDeveloperTitle?.(title) !== false;
     return phrases.some((tokens) =>
       tokens.every((t) =>
-        tokens.length > 1 && ROLE_TOKENS.has(t) ? [...ROLE_TOKENS].some(found) : found(t)
+        tokens.length > 1 && ROLE_TOKENS.has(t)
+          ? found(t) || ([...ROLE_TOKENS].some(found) && softwareRole())
+          : found(t)
       )
     );
   }
