@@ -88,7 +88,9 @@ function refreshCountries() {
     if (off && box.checked) uncovered.push(box.parentElement.textContent.trim());
   }
   const picked = selectedCountries();
-  countrySummary.textContent = picked.length ? describeCountries(picked) : "none";
+  countrySummary.textContent = picked.length
+    ? describeCountries(picked) + (uncovered.length ? ` · ${uncovered.length} not searched` : "")
+    : "none";
   countryNote.hidden = !uncovered.length;
   countryNote.textContent = uncovered.length
     ? `Not searched (no site on the ticked platforms): ${uncovered.join(", ")}.`

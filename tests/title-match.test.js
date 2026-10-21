@@ -46,6 +46,32 @@ test("the US version's synonyms still hold", () => {
   assert.ok(matches("Kubernetesplattform-Engineer", "Kubernetes Engineer"));
 });
 
+test("gender forms in a typed title are ignored", () => {
+  assert.ok(matches("Softwareentwickler (m/w/d)", "Softwareentwickler*in"));
+  assert.ok(matches("Backend Developer (m/w/d)", "Backend Entwickler:in"));
+  assert.ok(matches("Softwarearchitekt (m/w/d)", "Softwarearchitekt(in)"));
+  assert.ok(matches("Développeur Backend (H/F)", "Développeur·se Backend"));
+  assert.ok(matches("Programista Java", "Programista/ka Java"));
+  assert.ok(matches("Desarrollador Backend", "Desarrollador/a Backend"));
+  assert.ok(matches("Backend Developer", "Backend Developer (m/f/div)"));
+  assert.ok(matches("Backend Developer", "Backend Developer (all genders)"));
+  assert.equal(globalThis.jbStripGender("Softwareentwickler*in (m/w/d)"), "Softwareentwickler");
+  // Slashes between words stay
+  assert.equal(globalThis.jbStripGender("UI/UX Developer"), "UI/UX Developer");
+  assert.equal(globalThis.jbStripGender("C/C++ Developer"), "C/C++ Developer");
+  assert.equal(matches("Frontend Developer", "Frontend/Backend Developer"), false);
+});
+
+test("a typed compound matches the title written in parts", () => {
+  assert.ok(matches("Software-Architekt (m/w/d)", "Softwarearchitekt"));
+  assert.ok(matches("Software Architekt Cloud (m/w/d)", "Softwarearchitekt"));
+  assert.ok(matches("Software-Ingenieur (m/w/d)", "Softwareingenieur"));
+  assert.ok(matches("System-Administrator", "Systemadministrator"));
+  assert.ok(matches("Softwarearchitekt (m/w/d)", "Software Architekt"));
+  assert.equal(matches("Software Engineer", "Softwarearchitekt"), false);
+  assert.equal(matches("Daten Analyst", "Datenbank"), false);
+});
+
 test("commas mean any of the titles", () => {
   assert.ok(matches("Platform Engineer", "Backend Developer, Platform Engineer"));
   assert.ok(matches("Backend-Entwickler", "Backend Developer, Platform Engineer"));

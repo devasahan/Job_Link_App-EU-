@@ -95,8 +95,25 @@
     return s.replace(/\s+/g, " ").trim();
   }
 
+  // Gender forms in a typed title: "Entwickler*in", "Entwickler:innen",
+  // "Entwickler(in)", "Desarrollador/a", "Programista/ka", "Développeur·se",
+  // and tags like "(m/w/d)", "(m/f/div)", "(H/F)", "(gn)", "(all genders)"
+  const GENDER_SUFFIX_RE =
+    /(?<=\p{L})(?:[*:_·•/]-?|\.(?=(?:e|se|euse|rice|trice)(?![\p{L}\p{N}])))(?:innen|in|e|es|se|euse|rice|trice|a|ka)(?![\p{L}\p{N}-])|(?<=\p{L})\(\s*(?:innen|in|e|se|euse|rice|trice|a|ka)\s*\)/giu;
+  const GENDER_TAG_RE =
+    /\(\s*(?:[mwfdhvkx]|div|divers|diverse|inter|nb)(?:\s*[/|,*.]\s*(?:[mwfdhvkx]|div|divers|diverse|inter|nb|all))+\s*\)|\(\s*(?:all genders?|alle geschlechter|any gender|gn\*?)\s*\)|(?<![\p{L}\p{N}])[mwfh]\s*\/\s*[mwfhkv](?:\s*\/\s*(?:[dxv]|div|divers|diverse))?(?![\p{L}\p{N}])/giu;
+
+  /** A typed title without gender forms ("Softwareentwickler*in (m/w/d)" → "Softwareentwickler"). */
+  function stripGender(text) {
+    return String(text || "")
+      .replace(GENDER_TAG_RE, " ")
+      .replace(GENDER_SUFFIX_RE, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   function queryTokens(query) {
-    const s = normalize(query);
+    const s = normalize(stripGender(query));
     if (!s) return [];
     return s
       .split(" ")
@@ -122,12 +139,27 @@
     return false;
   }
 
+  // Two or three title words written together: a typed "Softwarearchitekt"
+  // also matches "Software-Architekt" and "Software Architekt"
+  function joinedWords(words) {
+    const out = [];
+    for (let i = 0; i + 1 < words.length; i++) {
+      out.push(words[i] + words[i + 1]);
+      if (i + 2 < words.length) out.push(words[i] + words[i + 1] + words[i + 2]);
+    }
+    return out;
+  }
+
   /** Every word of one comma-separated title is in the job title. */
   function jbTitleMatches(title, query) {
     const phrases = queryPhrases(query);
     if (!phrases.length) return true;
     const words = normalize(title).split(" ");
-    return phrases.some((tokens) => tokens.every((t) => tokenInWords(t, words)));
+    // Before the EU role words become English ones: "Software-Ingenieur" → softwareingenieur
+    const raw = fold(title).split(/[^\p{L}\p{N}+#]+/u).filter(Boolean);
+    const joined = [...joinedWords(words), ...joinedWords(raw)];
+    const inJoined = (t) => t.length >= 7 && joined.some((j) => j.startsWith(t));
+    return phrases.some((tokens) => tokens.every((t) => tokenInWords(t, words) || inJoined(t)));
   }
 
   /**
@@ -152,6 +184,7 @@
   globalThis.jbFold = fold;
   globalThis.jbTitleMatches = jbTitleMatches;
   globalThis.jbTitleQueryTokens = queryTokens;
+  globalThis.jbStripGender = stripGender;
   globalThis.jbTitleQueryPhrases = queryPhrases;
   /** All normalized words, 1-letter ones included ("C Developer" → c, developer). */
   globalThis.jbNormalizeWords = (text) => normalize(text).split(" ").filter(Boolean);

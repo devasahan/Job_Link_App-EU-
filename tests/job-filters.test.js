@@ -79,6 +79,14 @@ test("years in other EU languages", () => {
     ["zwischen 2 und 4 Jahren Berufserfahrung", 2],
     ["Entre 2 y 4 años de experiencia en paid media", 2],
     ["Da 2 a 4 anni di esperienza nel digital marketing", 2],
+    ["three to five years of experience", 3],
+    ["3,5 Jahre Erfahrung", 3.5],
+    // Degrees and courses aren't experience
+    ["Laurea triennale in informatica", null],
+    ["Laurea triennale; almeno 2 anni di esperienza", 2],
+    // The years come first, the experience word later in the sentence
+    ["Wir erwarten 3 Jahre Berufserfahrung in einer Agentur", 3],
+    ["Experience: Python: 5 years (Required)", 5],
   ]);
 });
 
@@ -92,6 +100,8 @@ test("company history in other languages is not a requirement", () => {
     ["Als Agentur mit über 12 Jahren Erfahrung suchen wir dich.", null],
     ["Forte de 12 ans d'expérience, notre agence accompagne les marques.", null],
     ["Firma z ponad 12-letnim doświadczeniem na rynku.", null],
+    ["Wir sind ein Unternehmen mit über 25 Jahren Erfahrung.", null],
+    ["Our company has 12 years of experience; you have 3 years of experience.", 3],
   ]);
 });
 
@@ -112,15 +122,15 @@ test("employment types in EU languages", () => {
     ["Temps plein", ["fulltime"]],
     ["Jornada completa", ["fulltime"]],
     ["Pełny etat", ["fulltime"]],
-    ["Werkstudent Marketing (m/w/d)", ["other"]],
-    ["Praktikum Online Marketing", ["other"]],
-    ["Stage - Chargé de marketing (H/F)", ["other"]],
-    ["Alternance Chargé de communication", ["other"]],
-    ["Becario marketing", ["other"]],
-    ["Tirocinio marketing", ["other"]],
-    ["Stagiair marketing", ["other"]],
-    ["Specjalista ds. marketingu (staż)", ["other"]],
-    ["Apprenticeship", ["other"]],
+    ["Werkstudent Marketing (m/w/d)", ["trainee"]],
+    ["Praktikum Online Marketing", ["trainee"]],
+    ["Stage - Chargé de marketing (H/F)", ["trainee"]],
+    ["Alternance Chargé de communication", ["trainee"]],
+    ["Becario marketing", ["trainee"]],
+    ["Tirocinio marketing", ["trainee"]],
+    ["Stagiair marketing", ["trainee"]],
+    ["Specjalista ds. marketingu (staż)", ["trainee"]],
+    ["Apprenticeship", ["trainee"]],
     ["Freelance SEO", ["contract"]],
     ["Freiberuflicher Texter", ["contract"]],
     ["Interim Marketing Manager", ["contract"]],
@@ -147,7 +157,7 @@ test("employment types in EU languages", () => {
     ["CDI - temps partiel", ["other"]],
     ["Fixed-term, Part-time", ["other"]],
     ["Project contract", ["contract"]],
-    ["Temp agency", ["other"]],
+    ["Temp agency", ["trainee"]],
     ["Πλήρης απασχόληση", ["fulltime"]],
     ["Festanstellung, Freie Mitarbeit", ["contract", "fulltime"]],
     ["Specjalista ds. SEO (UoP lub B2B)", ["contract", "fulltime"]],
@@ -156,16 +166,28 @@ test("employment types in EU languages", () => {
     ["Performance Marketing Manager (m/w/d) Vollzeit (Teilzeitmodelle möglich)", ["fulltime"]],
     ["Kommunikationsmanager (m/w/d) intern & extern", []],
     ["Referent Ausbildungsmarketing (m/w/d)", []],
-    ["Pflichtpraktikum Brand Marketing ab März", ["other"]],
-    ["Volontariat PR & Unternehmenskommunikation", ["other"]],
+    ["Pflichtpraktikum Brand Marketing ab März", ["trainee"]],
+    ["Volontariat PR & Unternehmenskommunikation", ["trainee"]],
     ["Marketing Manager 80-100%", ["fulltime", "other"]],
     ["Marketing Manager 60%", ["other"]],
     ["Junior Marketing Manager (m/w/d) – 100 % Homeoffice", []],
-    ["Intérim", ["other"]],
+    ["Intérim", ["trainee"]],
     ["Directeur Marketing par intérim", ["contract"]],
     ["Head of Marketing (Interim)", ["contract"]],
     ["Gestor de Marketing Digital (Recibos Verdes)", ["contract"]],
     ["Specialist marketing (PFA)", ["contract"]],
+    // Developer titles
+    ["Werkstudent Softwareentwicklung (m/w/d)", ["trainee"]],
+    ["Software Engineer Intern", ["trainee"]],
+    ["Junior Developer (Traineeship)", ["trainee"]],
+    ["Stage Développeur Full-Stack (H/F)", ["trainee"]],
+    ["Staż Programista Java", ["trainee"]],
+    ["Software Engineer – Vollzeit (Werkstudent möglich)", ["fulltime"]],
+    ["Backend Developer (Series A stage)", []],
+    ["Frontend Developer (100% remote)", []],
+    ["Backend Developer + 15% Bonus", []],
+    ["Fullstack Entwickler 80-100%", ["fulltime", "other"]],
+    ["Software Engineer, Pensum 80%", ["other"]],
   ];
   for (const [text, want] of cases) assert.deepEqual(kinds(text), want, text);
 });
@@ -183,6 +205,9 @@ test("descriptions only count explicit type phrases", () => {
   assert.deepEqual(kinds("Herengracht 1, 1099 AB Amsterdam", desc), []);
   assert.deepEqual(kinds("You brief our freelancers and contractors", desc), []);
   assert.deepEqual(kinds("Wir bieten eine unbefristete Festanstellung", desc), ["fulltime"]);
+  assert.deepEqual(kinds("This is a permanent position", desc), ["fulltime"]);
+  assert.deepEqual(kinds("Open to permanent residents of the EU", desc), []);
+  assert.deepEqual(kinds("We store temporal data in Postgres", desc), []);
   // Indeed's footer names the type
   assert.deepEqual(kinds("Job Types: Part-time. Schedule: Monday to Friday", desc), ["other"]);
   assert.deepEqual(kinds("Type d'emploi : Freelance / Indépendant", desc), ["contract"]);
@@ -196,6 +221,9 @@ test("picking a type keeps jobs that never state one", () => {
   assert.ok(!matches(job({ title: "Werkstudent Online Marketing" }), "both"));
   assert.ok(matches(job({ title: "Marketing Manager (Voll- oder Teilzeit)" }), "fulltime"));
   assert.ok(matches(job({ listing_type: "Freelance" }), "contract"));
+  // A trainee job goes even when the listing says full time
+  assert.ok(!matches(job({ listing_type: "Full-time", title: "Werkstudent Softwareentwicklung" }), "fulltime"));
+  assert.ok(!matches(job({ title: "Software Engineer Intern" }), "both"));
   assert.ok(!matches(job({ listing_type: "Full-time" }), "contract"));
 });
 

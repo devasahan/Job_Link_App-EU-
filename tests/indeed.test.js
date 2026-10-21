@@ -24,7 +24,7 @@ function rawJob(key, overrides = {}) {
     dateOnIndeed: Date.now() - 2 * HOUR,
     description: { html: "<p>Du entwickelst unsere APIs in Go.</p><ul><li>3+ Jahre Berufserfahrung</li></ul>" },
     location: { city: "Berlin", admin1Code: "BE", countryCode: "DE", formatted: { long: "Homeoffice in Berlin" } },
-    employer: { name: "Acme GmbH" },
+    employer: { name: `Acme ${key}` },
     attributes: [
       { key: "DSQF7", label: "Homeoffice" },
       { key: "CF3CP", label: "Vollzeit" },
@@ -230,7 +230,8 @@ test("scrapeIndeed pages with the cursor and stops at Count", async () => {
     if (!/cursor:/.test(call.query)) return page([rawJob("a"), rawJob("b")], "next1");
     return page([rawJob("c"), rawJob("d")], "next2");
   });
-  const jobs = await scrapeIndeed({ countries: ["DE"], resultsWanted: 3, datePreset: "today" });
+  // One title: one search, paged until Count matches
+  const jobs = await scrapeIndeed({ countries: ["DE"], title: "Backend Developer", resultsWanted: 3, datePreset: "today" });
   assert.equal(calls.length, 2);
   assert.equal(jobs.length, 3);
 });
@@ -285,10 +286,83 @@ test("scrapeIndeed: a blocked request stops the board; other failures skip the c
     datePreset: "today",
     onProgress: (m) => log.push(m),
   });
-  // Austria's error skips Austria; Belgium's 429 stops before France
-  assert.deepEqual(calls.map((c) => c.country), ["AT", "DE", "DE", "BE"]);
+  // Austria's server error is retried once, then skips Austria; Belgium's 429 stops before France
+  assert.deepEqual(calls.map((c) => c.country), ["AT", "AT", "DE", "DE", "BE"]);
   assert.deepEqual(jobs.map((j) => j.country), ["DE"]);
   assert.ok(log.some((m) => /stopped early/.test(m) && /Austria/.test(m) && /Belgium: .*429/.test(m)));
+});
+
+test("every search runs, and a job posted in several countries counts once (the newest)", async () => {
+  mockFetch((country, call) => {
+    const what = call.query.match(/what: "([^"]*)"/)[1];
+    if (what === "Frontend Developer") {
+      return page([rawJob(`${country}-fe`, { title: "Frontend Developer", dateOnIndeed: Date.now() - HOUR, location: { countryCode: country } })]);
+    }
+    // The same Acme backend job on the Austrian and German sites
+    return page([
+      rawJob(`${country}-be`, {
+        title: "Backend Developer",
+        employer: { name: "Acme" },
+        dateOnIndeed: Date.now() - (country === "DE" ? 2 : 3) * HOUR,
+        location: { countryCode: country },
+      }),
+    ]);
+  });
+  const jobs = await scrapeIndeed({ countries: ["AT", "DE"], title: "Backend Developer, Frontend Developer", resultsWanted: 3, datePreset: "today" });
+  assert.deepEqual(calls.map((c) => `${c.country} ${c.query.match(/what: "([^"]*)"/)[1]}`), [
+    "AT Backend Developer",
+    "AT Frontend Developer",
+    "DE Backend Developer",
+    "DE Frontend Developer",
+  ]);
+  // The newer German copy of the Acme job is kept, the Austrian one dropped
+  assert.deepEqual(jobs.map((j) => j.job_url.split("jk=")[1]).sort(), ["AT-fe", "DE-be", "DE-fe"]);
+});
+
+test("a server error is retried once; a broken query doesn't step the filters down", async () => {
+  let first = true;
+  mockFetch(() => {
+    if (first) {
+      first = false;
+      return new Response(JSON.stringify({ errors: [{ message: "Internal error" }] }), { status: 502 });
+    }
+    return page([rawJob("x")]);
+  });
+  const log = [];
+  const jobs = await scrapeIndeed({ countries: ["DE"], title: "Backend Developer", resultsWanted: 5, datePreset: "today", onProgress: (m) => log.push(m) });
+  assert.equal(jobs.length, 1);
+  assert.ok(calls.every((c) => /MUST_NOT/.test(c.query)));
+  assert.ok(!log.some((m) => /rejected/.test(m)));
+
+  calls = [];
+  mockFetch(() => new Response(JSON.stringify({ errors: [{ message: "Syntax Error: Unterminated string." }] }), { status: 400 }));
+  await assert.rejects(scrapeIndeed({ countries: ["DE"], title: "Backend Developer", resultsWanted: 5, datePreset: "today" }), /Syntax Error/);
+  assert.equal(calls.length, 1);
+});
+
+test("a dollar sign in the title stays literal in the query", () => {
+  const q = buildQuery("C$' Developer $& $$", null, "filters: []");
+  assert.match(q, /what: "C\$' Developer \$& \$\$"/);
+  assert.match(q, /filters: \[\]/);
+});
+
+test("a title with no usable words searches like no title", () => {
+  assert.deepEqual(searchTerms("-, (m/w/d)", "", "DE"), ["developer", "Entwickler"]);
+});
+
+test("gender forms are left out of the search", () => {
+  assert.deepEqual(searchTerms("Backend-Entwickler*in (m/w/d), Développeur·se", "", "DE"), [
+    "Backend-Entwickler",
+    "Développeur",
+  ]);
+});
+
+test("a refused key after another country's error still fails the board", async () => {
+  mockFetch((country) => {
+    if (country === "AT") return new Response(JSON.stringify({ errors: [{ message: "boom" }] }), { status: 500 });
+    return new Response("Too many requests", { status: 429 });
+  });
+  await assert.rejects(scrapeIndeed({ countries: ["AT", "BE", "DE"], title: "Backend Developer", resultsWanted: 5, datePreset: "today" }), /429/);
 });
 
 test("scrapeIndeed fails when every country fails", async () => {

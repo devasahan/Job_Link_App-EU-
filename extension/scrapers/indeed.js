@@ -27,6 +27,7 @@ import {
   sleep,
 } from "./util.js";
 import { readJson } from "./http.js";
+import { normalizeWords } from "./history.js";
 import { countryName, countryNames } from "./countries.js";
 
 const API_URL = "https://apis.indeed.com/graphql";
@@ -195,9 +196,10 @@ export function buildQuery(whatTerm, cursor, filters) {
   const term = (whatTerm || "").trim();
   const what = term ? `what: ${JSON.stringify(term)}` : "";
   const cursorPart = cursor ? `cursor: ${JSON.stringify(cursor)}` : "";
-  return QUERY_TMPL.replace("{{WHAT}}", what)
-    .replace("{{CURSOR}}", cursorPart)
-    .replace("{{FILTERS}}", filters);
+  // Function replacers: a "$'" or "$&" in the title must stay literal
+  return QUERY_TMPL.replace("{{WHAT}}", () => what)
+    .replace("{{CURSOR}}", () => cursorPart)
+    .replace("{{FILTERS}}", () => filters);
 }
 
 export function requestHeaders(country) {
@@ -211,10 +213,12 @@ export function requestHeaders(country) {
  * search also names Europe, EMEA or worldwide.
  */
 export function searchTerms(title, stack, country, { abroad = false } = {}) {
+  // Titles with no usable words ("-", "(m/w/d)") are dropped, as the title check
+  // drops them; gender forms are left out of the search ("Entwickler*in" → "Entwickler")
   const titles = String(title || "")
     .split(/[,;]/)
-    .map((t) => t.trim())
-    .filter(Boolean);
+    .filter((t) => globalThis.jbTitleQueryTokens(t).length)
+    .map((t) => globalThis.jbStripGender(t));
   const roles = titles.length ? titles : [...DEFAULT_TERMS, ...(LOCAL_TERMS[country] || [])];
   const extra = String(stack || "").trim();
   const terms = roles.map((role) => [role, extra].filter(Boolean).join(" "));
@@ -269,13 +273,21 @@ export function toJob(raw, country) {
 
 const INVALID_SITE_RE = /does not correspond to a valid Indeed site/i;
 
-/** A query Indeed refused as invalid (HTTP 400 or 200 with errors and no results). */
-const queryRejected = (res, data) =>
-  !data?.data?.jobSearch &&
-  Array.isArray(data?.errors) &&
-  data.errors.length > 0 &&
-  ![401, 403, 429].includes(res.status) &&
-  !INVALID_SITE_RE.test(JSON.stringify(data.errors));
+/**
+ * Indeed refused the query itself (a filter it doesn't know): HTTP 400 or a
+ * GraphQL validation code, not a broken request (syntax) or a country it has
+ * no site for. Only that steps the filters down.
+ */
+const queryRejected = (res, data) => {
+  if (data?.data?.jobSearch || !Array.isArray(data?.errors) || !data.errors.length) return false;
+  const errors = JSON.stringify(data.errors);
+  if (INVALID_SITE_RE.test(errors) || /syntax error/i.test(errors)) return false;
+  return res.status === 400 || /GRAPHQL_VALIDATION_FAILED|BAD_USER_INPUT/.test(errors);
+};
+
+/** A server error or an empty answer: worth one more try with the same filters. */
+const transientFailure = (res, data) =>
+  res.status >= 500 || (res.ok && !data?.data?.jobSearch && !queryRejected(res, data));
 
 /**
  * @param {{
@@ -344,6 +356,7 @@ export async function scrapeIndeed({
       return { res, data: await readJson(res, "indeed", "Indeed") };
     };
     let { res, data } = await post();
+    if (transientFailure(res, data)) ({ res, data } = await post());
     while (styleIndex < FILTER_STYLES.length - 1 && queryRejected(res, data)) {
       styleIndex += 1;
       onProgress?.(
@@ -370,9 +383,11 @@ export async function scrapeIndeed({
     const name = countryName(country);
     const countryMatched = [];
     const isAbroad = abroadSites.has(country);
+    // Every search runs: each title (and each language's word) has its own newest jobs
     for (const term of searchTerms(titleFilter, stack, country, { abroad: isAbroad })) {
       let cursor = null;
-      for (let page = 1; page <= MAX_PAGES && countryMatched.length < resultsWanted; page++) {
+      let termMatched = 0;
+      for (let page = 1; page <= MAX_PAGES && termMatched < resultsWanted; page++) {
         onProgress?.(
           `Indeed ${name} "${term}" page ${page} (${preset.label}, ${matched.length + countryMatched.length} matching)…`
         );
@@ -417,15 +432,15 @@ export async function scrapeIndeed({
           }
           pageJobs.push(job);
         }
-        countryMatched.push(
-          ...filterByRequest(pageJobs, {
-            hoursOld: preset.hoursOld,
-            title: titleFilter,
-            stack,
-            years,
-            jobType,
-          })
-        );
+        const kept = filterByRequest(pageJobs, {
+          hoursOld: preset.hoursOld,
+          title: titleFilter,
+          stack,
+          years,
+          jobType,
+        });
+        countryMatched.push(...kept);
+        termMatched += kept.length;
 
         // Results are newest first: once a whole page is too old, the rest are too
         const dated = pageJobs.filter((j) => j.date_posted);
@@ -435,15 +450,18 @@ export async function scrapeIndeed({
         cursor = search.pageInfo?.nextCursor || null;
         if (!cursor) break;
       }
-      if (countryMatched.length >= resultsWanted) break;
     }
     matched.push(...countryMatched);
   }
 
   if (!matched.length && failures.length) {
-    // Nothing found and something failed: the board failed
-    if (failures.length === targets.length || /\b(?:401|403|429)\b/.test(failures[0])) {
-      throw new Error(failures[0].replace(/^[^:]+: /, ""));
+    // Nothing found and something failed: the board failed. A refused key,
+    // block or rate limit stopped the run, so it is the reason
+    const stop = failures.find((f) => /\b(?:401|403|429)\b/.test(f));
+    if (stop) throw new Error(stop.replace(/^[^:]+: /, ""));
+    if (failures.length === targets.length) {
+      const reason = failures.find((f) => !/no site there/.test(f)) || failures[0];
+      throw new Error(reason.replace(/^[^:]+: /, ""));
     }
   }
   if (failures.length) {
@@ -454,9 +472,19 @@ export async function scrapeIndeed({
       `${elsewhere ? `, ${elsewhere} placed in other countries` : ""}` +
       `${notOpen ? `, ${notOpen} abroad not open to Europe` : ""} → ${matched.length} matching`
   );
-  // Newest first across countries, then Count
+  // Newest first across countries; the same job posted in several countries
+  // (title + company) counts once, the newest copy, before Count
+  const seenJobs = new Set();
   return matched
     .sort((a, b) => String(b.date_posted).localeCompare(String(a.date_posted)))
+    .filter((j) => {
+      const title = normalizeWords(j.title);
+      const company = normalizeWords(j.company);
+      const key = title && company ? `${title}|${company}` : j.job_url;
+      if (seenJobs.has(key)) return false;
+      seenJobs.add(key);
+      return true;
+    })
     .slice(0, resultsWanted)
     .map((j) => ({ ...j, date_posted: String(j.date_posted).slice(0, 10) }));
 }

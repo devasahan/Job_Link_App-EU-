@@ -119,14 +119,17 @@ form {
   background: var(--card);
 }
 
+/* list-item keeps the expand arrow */
 .countries summary {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
+  display: list-item;
   cursor: pointer;
   font-size: 12px;
   font-weight: 600;
   color: var(--muted);
+}
+
+.countries summary .summary-label {
+  margin-right: 8px;
 }
 
 .countries[open] summary {
