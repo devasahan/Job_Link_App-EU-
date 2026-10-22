@@ -198,6 +198,8 @@ test("anywhere in the country, travel time, the country's code in the title", ()
 });
 
 test("long descriptions are read quickly", () => {
+  // The first call builds the patterns
+  required({ description: "" }, "DE");
   const blurb =
     "Wir sind ein Unternehmen mit Sitz in München und Kunden in ganz Deutschland, Österreich und der Schweiz. " +
     "Du arbeitest 100% remote innerhalb Deutschlands, mit Workation bis zu 20 Tage aus dem EU-Ausland. ";
