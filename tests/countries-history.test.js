@@ -12,6 +12,7 @@ import {
   describeCountries,
 } from "../extension/scrapers/countries.js";
 import {
+  companyKey,
   jobKeys,
   loadDownloaded,
   normalizeWords,
@@ -53,4 +54,27 @@ test("downloaded jobs are remembered and recognised", async () => {
   assert.equal(downloaded.size, 1);
   assert.ok(downloaded.has({ ...job, job_url: "https://at.indeed.com/viewjob?jk=other" }));
   assert.equal(downloaded.recentCount("indeed", 24), 1);
+});
+
+test("history keys: the company with and without its legal form; anonymous jobs by link only", async () => {
+  assert.equal(companyKey("ACME GmbH & Co. KG"), "acme");
+  assert.equal(companyKey("Nordlys Sp. z o.o."), "nordlys");
+  assert.equal(companyKey("Société Générale S.A."), "societe generale");
+  assert.equal(companyKey("AB"), "ab");
+  assert.deepEqual(jobKeys({ title: "Go Developer", company: "Acme GmbH", job_url: "https://x.test/1" }), [
+    "url:x.test/1",
+    "job:go developer|acme gmbh",
+    "job:go developer|acme",
+  ]);
+  assert.deepEqual(jobKeys({ title: "Go Developer", company: "Confidential", anonymous: true, job_url: "https://x.test/2" }), [
+    "url:x.test/2",
+  ]);
+  // An entry saved before 2.4.0 (title | company as written) still matches
+  installChromeStorage({
+    downloadedJobs: [{ keys: ["url:old.test/9", "job:go developer|acme gmbh"], site: "indeed", at: Date.now() }],
+  });
+  const downloaded = await loadDownloaded();
+  assert.ok(downloaded.has({ title: "Go Developer", company: "Acme GmbH", job_url: "https://himalayas.test/1" }));
+  // The same title at a hidden employer is not that job
+  assert.ok(!downloaded.has({ title: "Go Developer", company: "Acme GmbH", anonymous: true, job_url: "https://agency.test/1" }));
 });
