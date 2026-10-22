@@ -125,7 +125,8 @@ test("toJob: country site link, type from attribute keys, years from the text", 
   assert.equal(job.listing_type, "Full-time");
   assert.equal(job.location, "Homeoffice in Berlin");
   assert.equal(job.is_remote, "Yes");
-  assert.equal(job.description, "Du entwickelst unsere APIs in Go. 3+ Jahre Berufserfahrung");
+  // Each paragraph or list item on its own line
+  assert.equal(job.description, "Du entwickelst unsere APIs in Go.\n3+ Jahre Berufserfahrung");
   assert.equal(toJob(rawJob("k2", { location: { countryCode: "GB" } }), "GB").job_url, "https://uk.indeed.com/viewjob?jk=k2");
   // Indeed writes Slovenia as SL
   assert.equal(toJob(rawJob("k3", { location: { countryCode: "SL" } }), "DE").country, "SI");
