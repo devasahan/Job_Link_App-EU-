@@ -1,0 +1,65 @@
+[
+  {
+    "id": 4101,
+    "date": "{{ago:1h}}",
+    "date_gmt": "{{ago:1h}}",
+    "guid": { "rendered": "https://euremotejobs.com/?post_type=job_listing&#038;p=4101" },
+    "modified": "{{ago:1h}}",
+    "modified_gmt": "{{ago:1h}}",
+    "slug": "senior-backend-engineer-nordlys",
+    "status": "publish",
+    "type": "job_listing",
+    "link": "https://euremotejobs.com/job/senior-backend-engineer-nordlys/",
+    "title": { "rendered": "Senior Backend Engineer &#8211; Payments" },
+    "content": { "rendered": "<p>Build our payments APIs in Go and run them on Kubernetes.</p>\n<ul><li>5+ years of experience</li></ul>\n", "protected": false },
+    "featured_media": 0,
+    "template": "",
+    "meta": {
+      "_job_location": "Europe",
+      "_application": "https://jobs.nordlys.example/apply/123",
+      "_company_name": "Nordlys Software AB",
+      "_company_website": "https://nordlys.example",
+      "_filled": 0,
+      "_featured": 0,
+      "_job_expires": "{{in:30d|date}}",
+      "_remote_position": 1
+    },
+    "job-types": [2],
+    "job-categories": [11],
+    "_embedded": {
+      "wp:term": [
+        [{ "id": 2, "link": "https://euremotejobs.com/job-type/full-time/", "name": "Full Time", "slug": "full-time", "taxonomy": "job_listing_type" }],
+        [{ "id": 11, "link": "https://euremotejobs.com/job-category/development/", "name": "Software Development", "slug": "development", "taxonomy": "job_listing_category" }]
+      ]
+    }
+  },
+  {
+    "id": 4097,
+    "date": "{{ago:4h}}",
+    "date_gmt": "{{ago:4h}}",
+    "guid": { "rendered": "https://euremotejobs.com/?post_type=job_listing&#038;p=4097" },
+    "modified_gmt": "{{ago:4h}}",
+    "link": "https://euremotejobs.com/job/python-developer-saga/",
+    "title": { "rendered": "Python Developer" },
+    "content": { "rendered": "<p>Data pipelines in Python and dbt.</p>\n", "protected": false },
+    "meta": {
+      "_job_location": "Sweden",
+      "_application": "jobs@saga.example",
+      "_company_name": "Saga Data AB",
+      "_filled": 0,
+      "_job_expires": ""
+    },
+    "_embedded": { "wp:term": [[{ "id": 2, "name": "Full Time", "slug": "full-time", "taxonomy": "job_listing_type" }], []] }
+  },
+  {
+    "id": 4089,
+    "date": "{{ago:3h}}",
+    "date_gmt": "{{ago:3h}}",
+    "guid": { "rendered": "https://euremotejobs.com/?post_type=job_listing&#038;p=4089" },
+    "modified_gmt": "{{ago:2h}}",
+    "link": "https://euremotejobs.com/job/java-developer-filled/",
+    "title": { "rendered": "Java Developer" },
+    "content": { "rendered": "<p>Spring Boot services.</p>\n", "protected": false },
+    "meta": { "_job_location": "EMEA", "_company_name": "Kettle Systems", "_filled": 1, "_job_expires": "{{in:20d|date}}" }
+  }
+]

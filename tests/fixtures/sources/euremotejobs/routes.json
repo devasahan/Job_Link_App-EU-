@@ -1,0 +1,15 @@
+{
+  "notes": "WP Job Manager's job feed (?feed=job_feed, the plugin's rss-job-feed template): RSS 2.0 items with title, link, dc:creator, pubDate, guid, description, content:encoded and job_listing:location / job_listing:job_type / job_listing:company. 12 jobs: page 2 ends past 24 hours, so page 3 is never asked for. The REST fallback (wp/v2/job-listings) has 3 rows; its page 2 is WordPress's 400 for a page past the end.",
+  "routes": [
+    { "url": "https://euremotejobs.com/robots.txt", "contentType": "text/plain", "file": "robots.txt" },
+    { "url": "https://euremotejobs.com/", "query": { "feed": "job_feed", "paged": null }, "file": "page1.xml" },
+    { "url": "https://euremotejobs.com/", "query": { "feed": "job_feed", "paged": "2" }, "file": "page2.xml" },
+    { "url": "https://euremotejobs.com/", "query": { "feed": "job_feed" }, "file": "empty.xml" },
+    { "url": "https://euremotejobs.com/wp-json/wp/v2/job-listings", "query": { "page": "1" }, "file": "rest-page1.json" },
+    {
+      "url": "https://euremotejobs.com/wp-json/wp/v2/job-listings",
+      "status": 400,
+      "body": { "code": "rest_post_invalid_page_number", "message": "The page number requested is larger than the number of pages available.", "data": { "status": 400 } }
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "comments": "10 open to France and Spain within UTC+0 to UTC+2; 11 page 1's first job again; 12 expired.",
+  "offset": 20,
+  "limit": 20,
+  "totalCount": 25,
+  "jobs": [
+    {
+      "title": "DevOps Engineer",
+      "excerpt": "Kubernetes and GitOps.",
+      "companyName": "Atlantique Cloud SAS",
+      "companySlug": "atlantique",
+      "employmentType": "Full Time",
+      "locationRestrictions": [{ "alpha2": "FR", "name": "France" }, "Spain"],
+      "timezoneRestrictions": [0, 1, 2],
+      "categories": ["DevOps", "Kubernetes"],
+      "description": "<p>Run our Kubernetes clusters with GitOps.</p>",
+      "pubDate": "{{ago:8h|unix}}",
+      "expiryDate": "{{in:30d|unix}}",
+      "applicationLink": "https://himalayas.app/companies/atlantique/jobs/devops-engineer/apply",
+      "guid": "https://himalayas.app/companies/atlantique/jobs/devops-engineer"
+    },
+    {
+      "title": "Senior Backend Engineer",
+      "excerpt": "Build our payments APIs in Go.",
+      "companyName": "Nordlys Software AB",
+      "companySlug": "nordlys",
+      "employmentType": "Full Time",
+      "locationRestrictions": [{ "alpha2": "DE", "name": "Germany" }],
+      "timezoneRestrictions": [],
+      "categories": ["Golang"],
+      "description": "<p>Build our payments APIs in Go.</p>",
+      "pubDate": "{{ago:1h|unix}}",
+      "expiryDate": "{{in:30d|unix}}",
+      "applicationLink": "https://jobs.nordlys.example/apply/123",
+      "guid": "https://himalayas.app/companies/nordlys/jobs/senior-backend-engineer"
+    },
+    {
+      "title": "Data Engineer",
+      "excerpt": "Closed.",
+      "companyName": "Oak Data",
+      "companySlug": "oak",
+      "employmentType": "Full Time",
+      "locationRestrictions": [],
+      "timezoneRestrictions": [],
+      "categories": ["Data"],
+      "description": "<p>Spark and dbt.</p>",
+      "pubDate": "{{ago:9h|unix}}",
+      "expiryDate": "{{ago:1d|unix}}",
+      "applicationLink": "https://oak.example/jobs/data",
+      "guid": "https://himalayas.app/companies/oak/jobs/data-engineer"
+    }
+  ]
+}

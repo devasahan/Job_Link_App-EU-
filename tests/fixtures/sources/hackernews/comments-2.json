@@ -1,0 +1,85 @@
+{
+  "hits": [
+    {
+      "created_at": "{{ago:8h}}",
+      "author": "hiring45600114",
+      "comment_text": "Loire Cloud | DevOps Engineer | Remote (France or Spain) | Contract, 6 months<p>Kubernetes and GitOps.",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:8h|unix}}",
+      "objectID": "45600114"
+    },
+    {
+      "created_at": "{{ago:9h}}",
+      "author": "hiring45600115",
+      "comment_text": "Mapleleaf Software | Senior Software Engineer | Toronto, Canada or Remote (Canada) | Full-time<p>Rails and React.",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:9h|unix}}",
+      "objectID": "45600115"
+    },
+    {
+      "created_at": "{{ago:10h}}",
+      "author": "hiring45600116",
+      "comment_text": "Northwind | Backend Engineer (Rust) | REMOTE (UK&#x2F;EU) | VISA<p>Rust, Tokio and Postgres for our energy market platform.",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:10h|unix}}",
+      "objectID": "45600116"
+    },
+    {
+      "created_at": "{{ago:11h}}",
+      "author": "hiring45600117",
+      "comment_text": "Quanta | Hybrid Cloud Engineer | Remote (Europe) | Full-time<p>Build the tooling that runs our customers&#x27; workloads on-prem and in the cloud.",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:11h|unix}}",
+      "objectID": "45600117"
+    },
+    {
+      "created_at": "{{ago:12h}}",
+      "author": "hiring45600119",
+      "comment_text": "Location: Lisbon, Portugal | Remote: Yes | Willing to relocate: No<p>Technologies: TypeScript, React, Node<p>Résumé&#x2F;CV: <a href=\"https:&#x2F;&#x2F;example.com&#x2F;cv.pdf\" rel=\"nofollow\">https:&#x2F;&#x2F;example.com&#x2F;cv.pdf</a>",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:12h|unix}}",
+      "objectID": "45600119"
+    },
+    {
+      "created_at": "{{ago:13h}}",
+      "author": "hiring45600120",
+      "comment_text": "Tidewater | Senior Software Engineer | Full-time<p>We&#x27;re a fully remote team hiring across Europe (CET ± 2 hours).<p>Stack: Elixir, Phoenix, Postgres.",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:13h|unix}}",
+      "objectID": "45600120"
+    },
+    {
+      "created_at": "{{ago:14h}}",
+      "author": "hiring45600121",
+      "comment_text": "Helix Bio | Software Engineer | Hybrid (London) or Remote (UK&#x2F;EU) | Full-time<p>Python and Django for our lab software.",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:14h|unix}}",
+      "objectID": "45600121"
+    },
+    {
+      "created_at": "{{ago:30h}}",
+      "author": "hiring45600118",
+      "comment_text": "Oak Data | Data Engineer | Remote (Worldwide) | Full-time<p>Spark and dbt.",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:30h|unix}}",
+      "objectID": "45600118"
+    }
+  ],
+  "nbHits": 1008,
+  "page": 1,
+  "nbPages": 2,
+  "hitsPerPage": 1000,
+  "exhaustiveNbHits": true,
+  "exhaustiveTypo": true,
+  "query": "",
+  "params": "tags=comment%2Cstory_45500000&hitsPerPage=1000",
+  "processingTimeMS": 3
+}

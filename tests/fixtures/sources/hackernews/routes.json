@@ -1,0 +1,10 @@
+{
+  "notes": "HN Algolia API (hn.algolia.com/api): search_by_date hits[] with objectID, title, created_at, created_at_i (seconds; quoted tokens here), and for comments comment_text (HN's HTML: <p> between paragraphs, &#x2F; and &#x27; escaped, links as <a href rel=nofollow>), parent_id, story_id, author; nbPages. The October thread (45500000) has 2 comment pages: posts with REMOTE (EU), CET, US only, Canada, hybrid, onsite, a placeless header, \"Hybrid Cloud Engineer\", multiple roles, a reply, a flagged comment, a job seeker, the seekers' template and a post without a header. Nordlys's Senior Backend Engineer is also on Himalayas and Jobicy. A window past the thread's start also reads September's (45100000).",
+  "routes": [
+    { "url": "https://hn.algolia.com/api/v1/search_by_date", "query": { "tags": "story,author_whoishiring" }, "file": "stories.json" },
+    { "url": "https://hn.algolia.com/api/v1/search_by_date", "query": { "tags": "comment,story_45500000", "page": "1" }, "file": "comments-2.json" },
+    { "url": "https://hn.algolia.com/api/v1/search_by_date", "query": { "tags": "comment,story_45500000" }, "file": "comments-1.json" },
+    { "url": "https://hn.algolia.com/api/v1/search_by_date", "query": { "tags": "comment,(story_45500000,story_45100000)" }, "file": "comments-month.json" },
+    { "url": "https://hn.algolia.com/api/v1/search_by_date", "file": "empty.json" }
+  ]
+}

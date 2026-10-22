@@ -386,7 +386,9 @@
   // ---- Time zones (standard offsets: Western 0, Central 1, Eastern European 2) ----
 
   const TZ_ELSE = "usa|us|american|north\\s+american|americas|amer|uk|british|latam|asia|asian|apac|africa|african|middle\\s+east";
-  const PLUS_MINUS = "(?:\\+\\s*/\\s*-|±|plus\\s+or\\s+minus)\\s*(\\d{1,2})";
+  // Hours may follow the offset: "±2h", "+/- 3 hrs", "UTC+1 hours"
+  const HOURS = "(?:\\s*(?:h|hrs?|hours?))?";
+  const PLUS_MINUS = `(?:\\+\\s*/\\s*-|±|plus\\s+or\\s+minus)\\s*(\\d{1,2})${HOURS}`;
   // "CET", "European time zones", "UK / EU timezone", "Western European or American time zone", "CET Zone +/- 2 hours"
   const TZ_NAMED_RE = words(
     `(?:(?:${TZ_ELSE})\\s*(?:and|or|&|/|\\+)\\s*)?(western european|central european|eastern european|european|eu|emea|europe)(?:\\s*(?:and|or|&|/|\\+)\\s*(?:${TZ_ELSE}))?\\s+(?:(?:summer|standard|business|working|work)\\s+)?(?:time[\\s-]*zones?|timezones?|time|hours|zones?|tz)(?:\\s*(?:\\(\\s*)?(?:or\\s+)?${PLUS_MINUS})?`,
@@ -394,7 +396,7 @@
   );
   // "UTC+1", "UTC-3 to UTC+3", "UTC/GMT -3 to -8", "between UTC-1 and UTC+3"
   const TZ_RANGE_RE = words(
-    "(?:utc|gmt)(?:\\s*/\\s*(?:utc|gmt))?\\s*([+-]|±)\\s*(\\d{1,2})(?:[:.][0-5]\\d)?(?:\\s*(?:to|-|and|through|until|till)\\s*(?:(?:utc|gmt)\\s*)?(?:([+-])\\s*)?(\\d{1,2})(?:[:.][0-5]\\d)?)?",
+    `(?:utc|gmt)(?:\\s*/\\s*(?:utc|gmt))?\\s*([+-]|±)\\s*(\\d{1,2})(?:[:.][0-5]\\d)?(?:\\s*(?:to|-|and|through|until|till)\\s*(?:(?:utc|gmt)\\s*)?(?:([+-])\\s*)?(\\d{1,2})(?:[:.][0-5]\\d)?)?${HOURS}`,
     "g"
   );
   // "GMT time zone (or +/- 3 hours", "UTC +/- 3"
@@ -717,5 +719,75 @@
     return closed(of("weak")[0]?.text || weakClosed[0]?.text);
   }
 
+  const ALL_CODES = COUNTRIES.map(([code]) => code);
+  const NAME_OF = new Map(COUNTRIES.map(([code, name]) => [code, name]));
+  // Two-letter list items that aren't European country codes
+  const CODE_OUTSIDE = { GB: "United Kingdom", UK: "United Kingdom", US: "United States", CA: "Canada" };
+  const WIDE_RANK = { Worldwide: 2 };
+
+  /**
+   * The places a board's location field or "who may apply" list names (for
+   * open-to.js): `codes`, the European countries it covers (all of them for
+   * Europe, the EU, EEA, EMEA or the world); `wide`, the widest region it
+   * names ("Worldwide" over "Europe"); `names`, the countries it names; and
+   * `outside`, places outside Europe ("usa", "india", "California"). A list is
+   * read item by item: an item may be an ISO code ("DE", "gb"), a name in
+   * English or the country's language ("Germany", "Deutschland", "EMEA"), or
+   * a longer text ("Remote - Europe").
+   */
+  function jbReadPlaces(textOrList) {
+    const { re, byName } = places();
+    const codes = new Set();
+    const names = [];
+    const outside = [];
+    const parts = [];
+    let wide = null;
+    const addCountry = (code) => {
+      codes.add(code);
+      if (!names.some((n) => n.code === code)) names.push({ code, name: NAME_OF.get(code) });
+    };
+    const setWide = (label) => {
+      if (!wide || (WIDE_RANK[label] || 1) > (WIDE_RANK[wide] || 1)) wide = label;
+      for (const code of ALL_CODES) codes.add(code);
+    };
+    const items = Array.isArray(textOrList) ? textOrList : [textOrList];
+    for (const raw of items) {
+      const item = typeof raw === "string" ? raw : String(raw?.alpha2 || raw?.code || raw?.name || "");
+      const code = item.trim().toUpperCase();
+      if (/^[A-Z]{2}$/.test(code) && code !== "EU") {
+        const own = code === "EL" ? "GR" : code;
+        if (NAME_OF.has(own)) addCountry(own);
+        else outside.push(CODE_OUTSIDE[code] || code);
+        continue;
+      }
+      for (const m of prep(item).matchAll(re)) {
+        const place = byName.get(m[1]);
+        if (!place) continue;
+        if (place.kind === "country") addCountry(place.code);
+        else if (place.kind === "region") setWide(place.label);
+        else if (place.kind === "world") setWide("Worldwide");
+        else if (place.kind === "part") {
+          parts.push(place.label);
+          for (const c of place.codes) codes.add(c);
+        } else outside.push(m[1]);
+      }
+    }
+    return { codes: ALL_CODES.filter((c) => codes.has(c)), wide, names, parts, outside };
+  }
+
+  /** European countries whose standard UTC offset is within [lo, hi]. */
+  function jbCountriesInUtc(lo, hi) {
+    return [...windowScope([Math.min(lo, hi), Math.max(lo, hi)])];
+  }
+
+  /** A European country's English name and the names postings write for it ("DE" → Germany, Deutschland). */
+  function jbCountryNames(code) {
+    const row = COUNTRIES.find(([c]) => c === String(code || "").toUpperCase());
+    return row ? [row[1], ...row[3]] : [];
+  }
+
   globalThis.jbOpenToEurope = jbOpenToEurope;
+  globalThis.jbReadPlaces = jbReadPlaces;
+  globalThis.jbCountriesInUtc = jbCountriesInUtc;
+  globalThis.jbCountryNames = jbCountryNames;
 })();

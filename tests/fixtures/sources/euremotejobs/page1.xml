@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Newest first. 1 open to Europe (the same job as Himalayas's Nordlys 'Senior Backend Engineer'); 2 not a developer; 3 US only; 4 hybrid; 5 Sweden only (the user's country when You live in is Sweden); 6 worldwide but says you must be based in Germany; 7 no location (the board's Europe), freelance; 8 a city the readers don't know, nothing in the text; 9 Anywhere; 10 an internship -->
+<rss version="2.0"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:atom="http://www.w3.org/2005/Atom"
+	xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+	xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+	xmlns:job_listing="https://euremotejobs.com"
+>
+<channel>
+	<title>EU Remote Jobs</title>
+	<atom:link href="https://euremotejobs.com/?feed=job_feed&#038;posts_per_page=50" rel="self" type="application/rss+xml" />
+	<link>https://euremotejobs.com</link>
+	<description>Remote jobs in Europe</description>
+	<lastBuildDate>{{ago:1h|rfc822}}</lastBuildDate>
+	<language>en-GB</language>
+	<sy:updatePeriod>hourly</sy:updatePeriod>
+	<sy:updateFrequency>1</sy:updateFrequency>
+	<item>
+		<title>Senior Backend Engineer</title>
+		<link>https://euremotejobs.com/job/senior-backend-engineer-nordlys/</link>
+		<dc:creator><![CDATA[EU Remote Jobs]]></dc:creator>
+		<pubDate>{{ago:1h|rfc822}}</pubDate>
+		<guid isPermaLink="false">https://euremotejobs.com/?post_type=job_listing&#038;p=4101</guid>
+		<description><![CDATA[Build our payments APIs in Go.]]></description>
+		<content:encoded><![CDATA[<p>Build our payments APIs in Go and run them on Kubernetes.</p><ul><li>5+ years of experience</li><li>Work from anywhere in Europe</li></ul>]]></content:encoded>
+		<job_listing:location><![CDATA[Europe]]></job_listing:location>
+		<job_listing:job_type><![CDATA[Full Time]]></job_listing:job_type>
+		<job_listing:company><![CDATA[Nordlys Software AB]]></job_listing:company>
+	</item>
+	<item>
+		<title>Customer Success Manager</title>
+		<link>https://euremotejobs.com/job/customer-success-manager/</link>
+		<dc:creator><![CDATA[EU Remote Jobs]]></dc:creator>
+		<pubDate>{{ago:2h|rfc822}}</pubDate>
+		<guid isPermaLink="false">https://euremotejobs.com/?post_type=job_listing&#038;p=4100</guid>
+		<description><![CDATA[Look after our EMEA customers.]]></description>
+		<content:encoded><![CDATA[<p>Look after our customers across EMEA.</p>]]></content:encoded>
+		<job_listing:location><![CDATA[EMEA]]></job_listing:location>
+		<job_listing:job_type><![CDATA[Full Time]]></job_listing:job_type>
+		<job_listing:company><![CDATA[Harbor CRM]]></job_listing:company>
+	</item>
+	<item>
+		<title>Frontend Developer</title>
+		<link>https://euremotejobs.com/job/frontend-developer-bluebonnet/</link>
+		<dc:creator><![CDATA[EU Remote Jobs]]></dc:creator>
+		<pubDate>{{ago:3h|rfc822}}</pubDate>
+		<guid isPermaLink="false">https://euremotejobs.com/?post_type=job_listing&#038;p=4099</guid>
+		<description><![CDATA[React for a health platform.]]></description>
+		<content:encoded><![CDATA[<p>React and TypeScript for our patient app.</p>]]></content:encoded>
+		<job_listing:location><![CDATA[USA]]></job_listing:location>
+		<job_listing:job_type><![CDATA[Full Time]]></job_listing:job_type>
+		<job_listing:company><![CDATA[Bluebonnet Health]]></job_listing:company>
+	</item>
+	<item>
+		<title>Full Stack Developer</title>
+		<link>https://euremotejobs.com/job/full-stack-developer-grachten/</link>
+		<dc:creator><![CDATA[EU Remote Jobs]]></dc:creator>
+		<pubDate>{{ago:3h|rfc822}}</pubDate>
+		<guid isPermaLink="false">https://euremotejobs.com/?post_type=job_listing&#038;p=4098</guid>
+		<description><![CDATA[Vue and Laravel.]]></description>
+		<content:encoded><![CDATA[<p>Vue and Laravel. Two days a week together in Amsterdam.</p>]]></content:encoded>
+		<job_listing:location><![CDATA[Hybrid - Amsterdam]]></job_listing:location>
+		<job_listing:job_type><![CDATA[Full Time]]></job_listing:job_type>
+		<job_listing:company><![CDATA[Grachten Digital]]></job_listing:company>
+	</item>
+	<item>
+		<title>Python Developer</title>
+		<link>https://euremotejobs.com/job/python-developer-saga/</link>
+		<dc:creator><![CDATA[EU Remote Jobs]]></dc:creator>
+		<pubDate>{{ago:4h|rfc822}}</pubDate>
+		<guid isPermaLink="false">https://euremotejobs.com/?post_type=job_listing&#038;p=4097</guid>
+		<description><![CDATA[Data pipelines in Python.]]></description>
+		<content:encoded><![CDATA[<p>Data pipelines in Python and dbt.</p>]]></content:encoded>
+		<job_listing:location><![CDATA[Sweden]]></job_listing:location>
+		<job_listing:job_type><![CDATA[Full Time]]></job_listing:job_type>
+		<job_listing:company><![CDATA[Saga Data AB]]></job_listing:company>
+	</item>
+	<item>
+		<title>Scala Developer</title>
+		<link>https://euremotejobs.com/job/scala-developer-weser/</link>
+		<dc:creator><![CDATA[EU Remote Jobs]]></dc:creator>
+		<pubDate>{{ago:5h|rfc822}}</pubDate>
+		<guid isPermaLink="false">https://euremotejobs.com/?post_type=job_listing&#038;p=4096</guid>
+		<description><![CDATA[Scala services.]]></description>
+		<content:encoded><![CDATA[<p>Scala and Akka services for logistics.</p><p>You must be based in Germany to apply.</p>]]></content:encoded>
+		<job_listing:location><![CDATA[Worldwide]]></job_listing:location>
+		<job_listing:job_type><![CDATA[Full Time]]></job_listing:job_type>
+		<job_listing:company><![CDATA[Weser Logistik GmbH]]></job_listing:company>
+	</item>
+	<item>
+		<title>Platform Engineer</title>
+		<link>https://euremotejobs.com/job/platform-engineer-vapor/</link>
+		<dc:creator><![CDATA[EU Remote Jobs]]></dc:creator>
+		<pubDate>{{ago:6h|rfc822}}</pubDate>
+		<guid isPermaLink="false">https://euremotejobs.com/?post_type=job_listing&#038;p=4095</guid>
+		<description><![CDATA[Terraform and AWS.]]></description>
+		<content:encoded><![CDATA[<p>Terraform, AWS and a lot of automation. Six-month contract.</p>]]></content:encoded>
+		<job_listing:job_type><![CDATA[Freelance]]></job_listing:job_type>
+		<job_listing:company><![CDATA[Vapor Ops]]></job_listing:company>
+	</item>
+	<item>
+		<title>Ruby on Rails Developer</title>
+		<link>https://euremotejobs.com/job/ruby-on-rails-developer-tram/</link>
+		<dc:creator><![CDATA[EU Remote Jobs]]></dc:creator>
+		<pubDate>{{ago:7h|rfc822}}</pubDate>
+		<guid isPermaLink="false">https://euremotejobs.com/?post_type=job_listing&#038;p=4094</guid>
+		<description><![CDATA[Rails monolith.]]></description>
+		<content:encoded><![CDATA[<p>Join our product team and grow our Rails monolith.</p>]]></content:encoded>
+		<job_listing:location><![CDATA[Berlin]]></job_listing:location>
+		<job_listing:job_type><![CDATA[Full Time]]></job_listing:job_type>
+		<job_listing:company><![CDATA[Tram Software]]></job_listing:company>
+	</item>
+	<item>
+		<title>Data Engineer</title>
+		<link>https://euremotejobs.com/job/data-engineer-birch/</link>
+		<dc:creator><![CDATA[EU Remote Jobs]]></dc:creator>
+		<pubDate>{{ago:8h|rfc822}}</pubDate>
+		<guid isPermaLink="false">https://euremotejobs.com/?post_type=job_listing&#038;p=4093</guid>
+		<description><![CDATA[Spark and Airflow.]]></description>
+		<content:encoded><![CDATA[<p>Spark &amp; Airflow, and a warehouse to tame.</p>]]></content:encoded>
+		<job_listing:location><![CDATA[Anywhere]]></job_listing:location>
+		<job_listing:job_type><![CDATA[Full Time]]></job_listing:job_type>
+		<job_listing:company><![CDATA[Birch Analytics]]></job_listing:company>
+	</item>
+	<item>
+		<title>Junior Developer Intern</title>
+		<link>https://euremotejobs.com/job/junior-developer-intern-pixel/</link>
+		<dc:creator><![CDATA[EU Remote Jobs]]></dc:creator>
+		<pubDate>{{ago:10h|rfc822}}</pubDate>
+		<guid isPermaLink="false">https://euremotejobs.com/?post_type=job_listing&#038;p=4092</guid>
+		<description><![CDATA[Six-month internship.]]></description>
+		<content:encoded><![CDATA[<p>A six-month internship in our web team.</p>]]></content:encoded>
+		<job_listing:location><![CDATA[Europe]]></job_listing:location>
+		<job_listing:job_type><![CDATA[Internship]]></job_listing:job_type>
+		<job_listing:company><![CDATA[Pixel Forge]]></job_listing:company>
+	</item>
+</channel>
+</rss>

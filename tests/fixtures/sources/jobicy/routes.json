@@ -1,0 +1,15 @@
+{
+  "notes": "Jobicy remote jobs API (github.com/Jobicy/remote-jobs-api): jobs[] with id, url, jobSlug, jobTitle, companyName, companyLogo, jobIndustry, jobType[], jobGeo, jobLevel, jobExcerpt, jobDescription (HTML), pubDate, annualSalaryMin/Max, salaryCurrency; /api/jobs adds nextCursor. Real pubDates read \"2026-10-21 10:22:48\" (UTC); the fixture writes ISO tokens so they stay recent (toIso reads both). europe has 2 pages; the Senior Backend Engineer at Nordlys is also on Himalayas, an hour older there (and listed again under emea); /api/v2/remote-jobs answers the same files when /api/jobs is a 404.",
+  "routes": [
+    { "url": "https://jobicy.com/api/jobs", "query": { "geo": "europe", "cursor": "eyJwYWdlIjoyfQ" }, "file": "europe-2.json" },
+    { "url": "https://jobicy.com/api/jobs", "query": { "geo": "europe", "cursor": null }, "file": "europe-1.json" },
+    { "url": "https://jobicy.com/api/jobs", "query": { "geo": "emea" }, "file": "emea.json" },
+    { "url": "https://jobicy.com/api/jobs", "query": { "geo": "anywhere" }, "file": "anywhere.json" },
+    { "url": "https://jobicy.com/api/jobs", "query": { "geo": "sweden" }, "file": "sweden.json" },
+    { "url": "https://jobicy.com/api/jobs", "file": "empty.json" },
+    { "url": "https://jobicy.com/api/v2/remote-jobs", "query": { "geo": "europe" }, "file": "europe-1.json" },
+    { "url": "https://jobicy.com/api/v2/remote-jobs", "query": { "geo": "emea" }, "file": "emea.json" },
+    { "url": "https://jobicy.com/api/v2/remote-jobs", "query": { "geo": "anywhere" }, "file": "anywhere.json" },
+    { "url": "https://jobicy.com/api/v2/remote-jobs", "file": "empty.json" }
+  ]
+}

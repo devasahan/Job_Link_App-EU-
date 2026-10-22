@@ -1,0 +1,130 @@
+{
+  "hits": [
+    {
+      "created_at": "{{ago:1h}}",
+      "author": "hiring45600101",
+      "comment_text": "Nordlys Software AB | Senior Backend Engineer | REMOTE (EU) | Full-time | €90k–€120k<p>We build payments infrastructure in Go and run it on Kubernetes. You&#x27;ll need 5+ years of backend experience.<p>Apply: <a href=\"https:&#x2F;&#x2F;jobs.lever.co&#x2F;nordlys&#x2F;7f1c2e\" rel=\"nofollow\">https:&#x2F;&#x2F;jobs.lever.co&#x2F;nordlys&#x2F;7f1c2e</a> or read about us at <a href=\"https:&#x2F;&#x2F;nordlys.se\" rel=\"nofollow\">https:&#x2F;&#x2F;nordlys.se</a>",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:1h|unix}}",
+      "objectID": "45600101"
+    },
+    {
+      "created_at": "{{ago:90m}}",
+      "author": "hiring45600102",
+      "comment_text": "Is this open to people living in Norway?",
+      "story_id": 45500000,
+      "parent_id": 45600101,
+      "created_at_i": "{{ago:90m|unix}}",
+      "objectID": "45600102"
+    },
+    {
+      "created_at": "{{ago:2h}}",
+      "author": "hiring45600103",
+      "comment_text": "Redwood Health | Staff Software Engineer | Remote (US only) | $200k-$240k + equity<p>Join our platform team. You must be authorized to work in the US.<p><a href=\"https:&#x2F;&#x2F;redwood.health&#x2F;careers\" rel=\"nofollow\">https:&#x2F;&#x2F;redwood.health&#x2F;careers</a>",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:2h|unix}}",
+      "objectID": "45600103"
+    },
+    {
+      "created_at": "{{ago:150m}}",
+      "author": "hiring45600104",
+      "comment_text": "Kiez GmbH | Full Stack Developer | Berlin, Germany | Hybrid (3 days in office) | Full-time<p>Node.js and Vue for our neighbourhood app.",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:150m|unix}}",
+      "objectID": "45600104"
+    },
+    {
+      "created_at": "{{ago:3h}}",
+      "author": "hiring45600105",
+      "comment_text": "Pixelhaus | Frontend Engineer | Amsterdam | ONSITE<p>React and TypeScript. We sit together in our canal-side office.",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:3h|unix}}",
+      "objectID": "45600105"
+    },
+    {
+      "created_at": "{{ago:190m}}",
+      "author": "hiring45600106",
+      "comment_text": "SEEKING WORK | Remote (Europe) | Python, Django, Postgres<p>Backend developer with 8 years of experience, looking for contract work. Email: dev@example.com",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:190m|unix}}",
+      "objectID": "45600106"
+    },
+    {
+      "created_at": "{{ago:4h}}",
+      "author": "hiring45600107",
+      "comment_text": "Rhein Robotics | Go Developer | Remote (Europe, CET ±2h) | Full-time<p>Work on our logistics platform in Go. You must be based in Germany for payroll reasons.<p><a href=\"https:&#x2F;&#x2F;boards.greenhouse.io&#x2F;rheinrobotics&#x2F;jobs&#x2F;4410\" rel=\"nofollow\">https:&#x2F;&#x2F;boards.greenhouse.io&#x2F;rheinrobotics&#x2F;jobs&#x2F;4410</a>",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:4h|unix}}",
+      "objectID": "45600107"
+    },
+    {
+      "created_at": "{{ago:270m}}",
+      "author": "hiring45600108",
+      "comment_text": "Lumen Labs | Account Executive, EMEA | Remote (EMEA) | Full-time<p>Own our EMEA pipeline.",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:270m|unix}}",
+      "objectID": "45600108"
+    },
+    {
+      "created_at": "{{ago:5h}}",
+      "author": "hiring45600109",
+      "comment_text": "Fjord Analytics (YC S21) | Data Platform Engineer | Remote (CET ± 3 hours) | Full-time<p>We build data pipelines in Python and Airflow.<p><a href=\"https:&#x2F;&#x2F;fjord.ai&#x2F;careers\" rel=\"nofollow\">https:&#x2F;&#x2F;fjord.ai&#x2F;careers</a>",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:5h|unix}}",
+      "objectID": "45600109"
+    },
+    {
+      "created_at": "{{ago:330m}}",
+      "author": "hiring45600110",
+      "comment_text": "We&#x27;re hiring at Tinybird! Come build real-time analytics with us: <a href=\"https:&#x2F;&#x2F;tinybird.example&#x2F;jobs\" rel=\"nofollow\">https:&#x2F;&#x2F;tinybird.example&#x2F;jobs</a>",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:330m|unix}}",
+      "objectID": "45600110"
+    },
+    {
+      "created_at": "{{ago:6h}}",
+      "author": "hiring45600111",
+      "comment_text": null,
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:6h|unix}}",
+      "objectID": "45600111"
+    },
+    {
+      "created_at": "{{ago:370m}}",
+      "author": "hiring45600112",
+      "comment_text": "Cobalt Cloud | Platform Engineer | Remote | Full-time<p>Terraform and AWS. Our team is distributed across the US.",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:370m|unix}}",
+      "objectID": "45600112"
+    },
+    {
+      "created_at": "{{ago:7h}}",
+      "author": "hiring45600113",
+      "comment_text": "Globetrot | Multiple roles | Remote (Europe) | Full-time<p>We&#x27;re hiring:<p>- Senior Backend Engineer (Python)<p>- Engineering Manager<p>Apply at <a href=\"https:&#x2F;&#x2F;jobs.ashbyhq.com&#x2F;globetrot\" rel=\"nofollow\">https:&#x2F;&#x2F;jobs.ashbyhq.com&#x2F;globetrot</a>",
+      "story_id": 45500000,
+      "parent_id": 45500000,
+      "created_at_i": "{{ago:7h|unix}}",
+      "objectID": "45600113"
+    }
+  ],
+  "nbHits": 1013,
+  "page": 0,
+  "nbPages": 2,
+  "hitsPerPage": 1000,
+  "exhaustiveNbHits": true,
+  "exhaustiveTypo": true,
+  "query": "",
+  "params": "tags=comment%2Cstory_45500000&hitsPerPage=1000",
+  "processingTimeMS": 3
+}

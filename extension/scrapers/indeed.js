@@ -29,6 +29,7 @@ import {
 import { readJson } from "./http.js";
 import { normalizeWords } from "./history.js";
 import { countryName, countryNames } from "./countries.js";
+import { sourceLine } from "./core/diagnostics.js";
 
 const API_URL = "https://apis.indeed.com/graphql";
 
@@ -310,6 +311,26 @@ const transientFailure = (res, data) =>
   res.status >= 500 || (res.ok && !data?.data?.jobSearch && !queryRejected(res, data));
 
 /**
+ * The countries Indeed searches: the ticked ones it has a site for (not where
+ * the user lives: they want jobs from other countries), then the employers
+ * abroad. `noSite` are ticked countries it has no site for.
+ */
+export function indeedTargets({ countries, abroad, home } = {}) {
+  const wanted = new Set((countries || []).filter((code) => code !== home));
+  const abroadSites = new Set((abroad || []).filter((code) => INDEED_SITES[code] && !wanted.has(code)));
+  return {
+    wanted,
+    abroadSites,
+    targets: [...[...wanted].filter((code) => INDEED_SITES[code]), ...abroadSites],
+    noSite: [...wanted].filter((code) => !INDEED_SITES[code]),
+  };
+}
+
+/**
+ * The returned jobs carry `incomplete` (some countries weren't searched to
+ * the end) and `report` ({ scanned, kept, dropped, merged, failures }, in
+ * the shared format of core/diagnostics.js). `summary: false` leaves the
+ * final line to the caller; `signal` stops the run between requests.
  * @param {{
  *   title?: string,
  *   stack?: string,
@@ -320,7 +341,9 @@ const transientFailure = (res, data) =>
  *   datePreset?: string,
  *   years?: number | "",
  *   jobType?: string,
- *   onProgress?: (msg: string) => void
+ *   onProgress?: (msg: string) => void,
+ *   summary?: boolean,
+ *   signal?: AbortSignal
  * }} opts
  */
 export async function scrapeIndeed({
@@ -334,14 +357,12 @@ export async function scrapeIndeed({
   years,
   jobType,
   onProgress,
+  summary = true,
+  signal,
 }) {
   const preset = resolveDatePreset(datePreset);
   const titleFilter = (title || "").trim();
-  // Where the user lives isn't searched: they want jobs from other countries
-  const wanted = new Set((countries || []).filter((code) => code !== home));
-  const abroadSites = new Set((abroad || []).filter((code) => INDEED_SITES[code] && !wanted.has(code)));
-  const targets = [...[...wanted].filter((code) => INDEED_SITES[code]), ...abroadSites];
-  const noSite = [...wanted].filter((code) => !INDEED_SITES[code]);
+  const { wanted, abroadSites, targets, noSite } = indeedTargets({ countries, abroad, home });
   // Names a job abroad may give for where it hires, in English and their own language: where the
   // user lives, or with that not set the ticked countries
   const openToNames = home ? countryNames(home) : [...wanted].flatMap((code) => countryNames(code));
@@ -375,12 +396,13 @@ export async function scrapeIndeed({
       if (requests++) await sleep(country === lastCountry ? PAGE_PAUSE_MS : COUNTRY_PAUSE_MS);
       lastCountry = country;
       const filters = buildFilters(FILTER_STYLES[styleIndex], { hoursOld: preset.hoursOld });
+      // A stuck request would hold up every country after it
+      const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
       const res = await fetch(API_URL, {
         method: "POST",
         headers: requestHeaders(country),
         body: JSON.stringify({ query: buildQuery(term, cursor, filters) }),
-        // A stuck request would hold up every country after it
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
       });
       return { res, data: await readJson(res, "indeed", "Indeed") };
     };
@@ -409,6 +431,7 @@ export async function scrapeIndeed({
   }
 
   countries: for (const country of targets) {
+    if (signal?.aborted) break;
     const name = countryName(country);
     const countryMatched = [];
     const scannedBefore = scanned;
@@ -428,6 +451,12 @@ export async function scrapeIndeed({
         try {
           search = await fetchPage(country, term, cursor);
         } catch (err) {
+          if (signal?.aborted) {
+            // Stopped: what this country found so far is kept, the rest isn't searched
+            failures.push(`${name}: ${signal.reason?.message || "stopped"}`);
+            matched.push(...countryMatched);
+            break countries;
+          }
           const msg = INVALID_SITE_RE.test(err?.message)
             ? "Indeed has no site there"
             : err?.message || String(err);
@@ -515,27 +544,18 @@ export async function scrapeIndeed({
   if (failures.length) {
     onProgress?.(`Indeed stopped early, results may be incomplete: ${failures.join("; ")}`);
   }
-  const leftOut = [
-    [
-      dropped.title,
-      globalThis.jbTitleQueryPhrases(titleFilter).length ? "not matching the title" : "not developer roles",
-    ],
-    [dropped.old, `older than ${preset.span}`],
-    [dropped.type, "other job types"],
-    [dropped.years, "asking for more years"],
-    [dropped.stack, "without the stack words"],
-    [notRemote, "hybrid or not remote"],
-    [elsewhere, "placed in other countries"],
-    [inHome, "in your country"],
-    [residentsOnly, "only for people living in their country"],
-    [notOpen, "abroad, not open to Europe"],
-  ]
-    .filter(([n]) => n)
-    .map(([n, why]) => `${n} ${why}`);
-  onProgress?.(
-    `Indeed: ${targets.length} ${targets.length === 1 ? "country" : "countries"}, ${scanned} scanned → ${matched.length} matching` +
-      (leftOut.length ? `. Left out: ${leftOut.join(", ")}` : "")
-  );
+  // The checks' counters, in the shared report format: scanned = kept + every drop
+  const report = {
+    scanned,
+    kept: matched.length,
+    dropped: { ...dropped, notRemote, elsewhere, inHome, residentsOnly, notOpen },
+    // Kept jobs that are one row with another country's copy (below)
+    merged: 0,
+    failures,
+  };
+  if (summary) {
+    onProgress?.(sourceLine({ label: "Indeed", status: "ok", ...report, title: titleFilter, span: preset.span }));
+  }
   // Newest first across countries; the same job posted in several countries
   // (title + company) counts once, the newest copy, before Count
   const seenJobs = new Set();
@@ -553,5 +573,7 @@ export async function scrapeIndeed({
     .map((j) => ({ ...j, date_posted: String(j.date_posted).slice(0, 10) }));
   // Some countries weren't searched to the end: wider settings aren't the fix
   jobs.incomplete = failures.some((f) => !/no site there/.test(f));
+  report.merged = matched.length - seenJobs.size;
+  jobs.report = report;
   return jobs;
 }

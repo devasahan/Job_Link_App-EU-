@@ -233,7 +233,7 @@ test("employers abroad count only when the posting is open to Europe or a ticked
   );
   const usTerms = calls.filter((c) => c.country === "US").map((c) => c.query.match(/what: "([^"]*)"/)[1]);
   assert.deepEqual(usTerms.slice(0, 3), ["developer Europe", "developer EMEA", "developer worldwide"]);
-  assert.ok(log.some((m) => /2 abroad, not open to Europe/.test(m)));
+  assert.ok(log.some((m) => /2 not open to Europe/.test(m)));
 });
 
 test("scrapeIndeed pages with the cursor and stops at Count", async () => {
@@ -407,13 +407,19 @@ test("the run log says what each check left out", async () => {
   });
   assert.deepEqual(jobs.map((j) => j.job_url.split("jk=")[1]), ["ok"]);
   assert.ok(log.includes("Indeed Germany: 6 scanned → 1 kept"), log.join("\n"));
+  // The shared format of every source's line (core/diagnostics.js)
   assert.ok(
     log.includes(
-      "Indeed: 1 country, 6 scanned → 1 matching. Left out: 1 not developer roles, 1 older than 24 hours, " +
+      "Indeed: 6 scanned → 1 kept. Left out: 1 not developer roles, 1 older than 24 hours, " +
         "1 other job types, 1 hybrid or not remote, 1 placed in other countries"
     ),
     log.join("\n")
   );
+  // …built from jobs.report, whose counters balance
+  const { scanned, kept, dropped } = jobs.report;
+  assert.equal(scanned, 6);
+  assert.equal(kept, 1);
+  assert.equal(Object.values(dropped).reduce((a, n) => a + n, 0), 5);
 });
 
 test("a run that stopped early says so, so the runner doesn't advise wider settings", async () => {

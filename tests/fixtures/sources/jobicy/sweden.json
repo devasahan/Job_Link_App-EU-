@@ -1,0 +1,40 @@
+{
+  "apiVersion": "2",
+  "documentationUrl": "https://jobicy.com/jobs-rss-feed",
+  "friendlyNotice": "Usage of the Jobicy Remote Jobs API is allowed, but we kindly ask that you mention Jobicy.com as the source of the job listings and provide a link back to the original job listing URL on Jobicy.com.",
+  "jobCount": 2,
+  "lastUpdate": "{{ago:20m}}",
+  "nextCursor": null,
+  "jobs": [
+    {
+      "id": 131020,
+      "url": "https://jobicy.com/jobs/131020-backend-engineer",
+      "jobSlug": "131020-backend-engineer",
+      "jobTitle": "Backend Engineer",
+      "companyName": "Svea Tech AB",
+      "companyLogo": "",
+      "jobIndustry": ["Programming"],
+      "jobType": ["full-time"],
+      "jobGeo": "Sweden",
+      "jobLevel": "Midweight",
+      "jobExcerpt": "Kotlin and Postgres.",
+      "jobDescription": "<p>Kotlin and Postgres.</p>",
+      "pubDate": "{{ago:2h}}"
+    },
+    {
+      "id": 131007,
+      "url": "https://jobicy.com/jobs/131007-python-developer",
+      "jobSlug": "131007-python-developer",
+      "jobTitle": "Python Developer",
+      "companyName": "Lagom Data AB",
+      "companyLogo": "",
+      "jobIndustry": ["Data Science"],
+      "jobType": ["full-time"],
+      "jobGeo": "Sweden",
+      "jobLevel": "Midweight",
+      "jobExcerpt": "Build data pipelines in Python.",
+      "jobDescription": "<p>Build data pipelines in Python and Airflow.</p>",
+      "pubDate": "{{ago:6h}}"
+    }
+  ]
+}

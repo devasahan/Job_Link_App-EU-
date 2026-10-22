@@ -1,7 +1,11 @@
 /**
  * Jobs already downloaded, remembered in this browser (chrome.storage.local)
  * so later runs can skip them. A job is known by its link and by its title +
- * company, so the same job found on another board later is a repeat too.
+ * company, so the same job found on another board later is a repeat too
+ * (not for an anonymous job, whose company an agency or board hides: its
+ * link alone). The company is stored as written and without its legal form
+ * ("Acme GmbH" and "Acme"), so entries saved before 2.4.0 still match, and
+ * the job under the key the run merges by (no gender tag, no legal form).
  * Entries are kept for 31 days, a day longer than the longest Posted window
  * (30 days), so a job seen in any window is still known.
  */
@@ -20,7 +24,31 @@ export const normalizeWords = (s) =>
     .replace(/[^\p{L}\p{N}+#]+/gu, " ")
     .trim();
 
-function canonicalUrl(url) {
+// Legal forms at the end of a company name: "Acme GmbH", "Acme Sp. z o.o.", "Acme & Co. KG"
+const LEGAL_FORM_RE =
+  /(?:\s+(?:gmbh|ag|kg|kgaa|ug|ev|co|ltd|limited|inc|incorporated|llc|llp|lp|plc|corp|corporation|company|ab|abp|oy|oyj|as|asa|aps|a s|bv|b v|nv|n v|sa|s a|sas|sarl|srl|s r l|spa|s p a|se|kft|zrt|nyrt|sro|s r o|sp z o o|sp k|ou|uab|sia|doo|d o o|ehf|ltda|pty|pvt|bvba|sprl|scs|oü))+$/u;
+
+/** The company without its legal form, the way the run merges sources: "acme" for "ACME GmbH & Co. KG". */
+export function companyKey(company) {
+  const words = normalizeWords(company);
+  const short = words.replace(LEGAL_FORM_RE, "").trim();
+  return short || words;
+}
+
+/**
+ * The key the run merges sources by: the title without its gender tag and the
+ * company without its legal form ("job:backend developer|acme" for "Backend
+ * Developer (m/w/d)" at "ACME GmbH"); "" for an anonymous job or one missing either.
+ */
+export function mergeKey(job) {
+  if (job?.anonymous) return "";
+  const title = normalizeWords(globalThis.jbStripGender(job?.title));
+  const company = companyKey(job?.company);
+  return title && company ? `job:${title}|${company}` : "";
+}
+
+/** A job link without tracking parameters, fragment or trailing slash ("host/path?query"). */
+export function canonicalUrl(url) {
   try {
     const u = new URL(url);
     u.hash = "";
@@ -33,13 +61,24 @@ function canonicalUrl(url) {
   }
 }
 
-/** The keys a job is remembered by. */
+/**
+ * The keys a job is remembered by. The merge key is one of them, so any two
+ * copies a run would merge ("Go Developer (m/w/d)" at "Acme GmbH" on Indeed,
+ * "Go Developer" at "Acme" on a board) know each other.
+ */
 export function jobKeys(job) {
   const keys = [];
   if (job?.job_url) keys.push(`url:${canonicalUrl(job.job_url)}`);
+  if (job?.anonymous) return keys;
   const title = normalizeWords(job?.title);
   const company = normalizeWords(job?.company);
-  if (title && company) keys.push(`job:${title}|${company}`);
+  if (title && company) {
+    keys.push(`job:${title}|${company}`);
+    const short = companyKey(job.company);
+    if (short !== company) keys.push(`job:${title}|${short}`);
+    const merge = mergeKey(job);
+    if (merge && !keys.includes(merge)) keys.push(merge);
+  }
   return keys;
 }
 
