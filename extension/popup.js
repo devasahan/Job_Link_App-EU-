@@ -1,15 +1,17 @@
 import { downloadedCount, forgetDownloaded } from "./scrapers/history.js";
-import { ALL_COUNTRIES, EU_CODES, countryName, describeCountries } from "./scrapers/countries.js";
-import { BOARD_COUNTRIES } from "./scrapers/index.js";
+import { ABROAD_CODES, ALL_COUNTRIES, EU_CODES, countryName, describeCountries } from "./scrapers/countries.js";
+import { GROUPS, liveSources, sourceById } from "./scrapers/sources.js";
 import { DATE_PRESETS } from "./scrapers/util.js";
 
 const form = document.getElementById("fetch-form");
 const statusEl = document.getElementById("status");
 const okBtn = document.getElementById("ok-btn");
+const checkBtn = document.getElementById("check-btn");
 const countryList = document.getElementById("country-list");
 const countrySummary = document.getElementById("country-summary");
 const countryNote = document.getElementById("country-note");
 const homeSelect = document.getElementById("home");
+const sourceGroups = document.getElementById("source-groups");
 
 const STORAGE_KEYS = [
   "title",
@@ -26,8 +28,9 @@ const STORAGE_KEYS = [
   "skip_downloaded",
 ];
 
-// Boards the popup had before known_sites was saved
+// Sources the popup had before known_sites was saved
 const FIRST_SITES = ["indeed"];
+const EVERY_CODE = [...ALL_COUNTRIES.map((c) => c.code), ...ABROAD_CODES];
 
 const siteBoxes = () => [...form.querySelectorAll('input[name="site"]')];
 const countryBoxes = () => [...form.querySelectorAll('input[name="country"]')];
@@ -56,13 +59,81 @@ function selectedAbroad() {
     .map((el) => el.value);
 }
 
-/** Countries at least one ticked board can search. */
+/** Countries at least one ticked source can search (a source with no list searches any). */
 function coveredCountries() {
   const covered = new Set();
   for (const site of selectedSites()) {
-    for (const code of BOARD_COUNTRIES[site] || []) covered.add(code);
+    for (const code of sourceById(site)?.countries || EVERY_CODE) covered.add(code);
   }
   return covered;
+}
+
+/** Only sources bound to the ticked countries: the user's own country alone is nothing to search. */
+const allCountryBound = (sites) => sites.length > 0 && sites.every((id) => sourceById(id)?.countryBound);
+
+/** The Platforms groups ("Job boards · 2 of 3", All / None); empty groups aren't shown. */
+function renderSources() {
+  for (const group of GROUPS) {
+    const sources = liveSources().filter((s) => s.group === group.id);
+    if (!sources.length) continue;
+    const details = document.createElement("details");
+    details.className = "source-group";
+    details.dataset.group = group.id;
+    const summary = document.createElement("summary");
+    const label = document.createElement("span");
+    label.textContent = group.label;
+    const count = document.createElement("span");
+    count.className = "hint group-count";
+    summary.append(label, count);
+    const pick = document.createElement("div");
+    pick.className = "pick";
+    for (const [which, text] of [
+      ["all", "All"],
+      ["none", "None"],
+    ]) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "link";
+      button.dataset.groupPick = which;
+      button.textContent = text;
+      pick.append(button);
+    }
+    const grid = document.createElement("div");
+    grid.className = "source-grid";
+    for (const source of sources) {
+      const box = document.createElement("input");
+      box.type = "checkbox";
+      box.name = "site";
+      box.value = source.id;
+      // New sources start at their default, so many new ones don't all switch on at once
+      box.checked = source.defaultOn;
+      const item = document.createElement("label");
+      item.className = "check";
+      item.title = source.url || "";
+      item.append(box, ` ${source.label}`);
+      if (source.hint) {
+        const hint = document.createElement("span");
+        hint.className = "hint";
+        hint.textContent = `(${source.hint})`;
+        item.append(" ", hint);
+      }
+      grid.append(item);
+    }
+    details.append(summary, pick, grid);
+    sourceGroups.append(details);
+  }
+}
+
+/** Group counts, and freelance greyed out while Type is Full time. */
+function refreshSources() {
+  for (const details of sourceGroups.querySelectorAll(".source-group")) {
+    const boxes = [...details.querySelectorAll('input[name="site"]')];
+    const on = boxes.filter((b) => b.checked).length;
+    details.querySelector(".group-count").textContent = `· ${on} of ${boxes.length}`;
+    const off = details.dataset.group === "freelance" && form.job_type.value === "fulltime";
+    details.classList.toggle("off", off);
+    details.title = off ? "Freelance work isn't full time: set Type to Contract or Both" : "";
+  }
 }
 
 function renderCountries() {
@@ -133,7 +204,7 @@ async function restoreForm() {
   form.skip_downloaded.checked = saved.skip_downloaded !== false;
   if (Array.isArray(saved.sites) && saved.sites.length) {
     const known = Array.isArray(saved.known_sites) ? saved.known_sites : FIRST_SITES;
-    // Boards added since the last save keep their default (ticked)
+    // Sources added since the last save keep their default
     siteBoxes().forEach((el) => {
       if (known.includes(el.value)) el.checked = saved.sites.includes(el.value);
     });
@@ -150,6 +221,7 @@ async function restoreForm() {
     });
   }
   refreshCountries();
+  refreshSources();
 }
 
 const countEl = document.getElementById("downloaded-count");
@@ -177,13 +249,25 @@ form.querySelectorAll("[data-countries]").forEach((button) => {
   });
 });
 
-form.addEventListener("change", (event) => {
-  if (["site", "country", "home"].includes(event.target.name)) refreshCountries();
+sourceGroups.addEventListener("click", (event) => {
+  const which = event.target.dataset?.groupPick;
+  if (!which) return;
+  const details = event.target.closest(".source-group");
+  details.querySelectorAll('input[name="site"]').forEach((el) => {
+    el.checked = which === "all";
+  });
+  refreshCountries();
+  refreshSources();
 });
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
+form.addEventListener("change", (event) => {
+  if (["site", "country", "home"].includes(event.target.name)) refreshCountries();
+  if (["site", "job_type"].includes(event.target.name)) refreshSources();
+});
 
+/** Save the form and open the runner: a run ("run") or Check sources ("check"). */
+async function start(mode) {
+  const check = mode === "check";
   const title = form.title.value.trim();
   const stack = form.stack.value.trim();
   const count = Math.max(1, Math.min(200, Number(form.count.value) || 50));
@@ -204,7 +288,7 @@ form.addEventListener("submit", async (event) => {
   const home = homeSelect.value;
   const skipDownloaded = form.skip_downloaded.checked;
 
-  if (!sites.length) {
+  if (!sites.length && !check) {
     setStatus("Select at least one platform.", "error");
     return;
   }
@@ -213,20 +297,21 @@ form.addEventListener("submit", async (event) => {
     document.getElementById("countries").open = true;
     return;
   }
-  if (home && !abroad.length && countries.every((code) => code === home)) {
+  if (!check && allCountryBound(sites) && home && !abroad.length && countries.every((code) => code === home)) {
     setStatus(`Tick a country other than ${countryName(home)}, where you live.`, "error");
     document.getElementById("countries").open = true;
     return;
   }
   const covered = coveredCountries();
-  if (![...countries.filter((code) => code !== home), ...abroad].some((code) => covered.has(code))) {
+  if (!check && ![...countries.filter((code) => code !== home), ...abroad].some((code) => covered.has(code))) {
     setStatus("The ticked platforms have no site for any selected country.", "error");
     document.getElementById("countries").open = true;
     return;
   }
 
   okBtn.disabled = true;
-  setStatus("Opening fetch tab…");
+  checkBtn.disabled = true;
+  setStatus(check ? "Opening the source check…" : "Opening fetch tab…");
 
   await chrome.storage.local.set({
     title,
@@ -241,7 +326,7 @@ form.addEventListener("submit", async (event) => {
     job_type: jobType,
     known_sites: siteBoxes().map((el) => el.value),
     skip_downloaded: skipDownloaded,
-    pendingFetch: { title, stack, count, sites, countries, abroad, home, datePreset, years, jobType, skipDownloaded },
+    pendingFetch: { title, stack, count, sites, countries, abroad, home, datePreset, years, jobType, skipDownloaded, mode },
   });
 
   await chrome.tabs.create({
@@ -249,9 +334,17 @@ form.addEventListener("submit", async (event) => {
   });
 
   window.close();
+}
+
+checkBtn.addEventListener("click", () => start("check"));
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+  start("run");
 });
 
+renderSources();
 renderCountries();
 renderHome();
+refreshSources();
 restoreForm();
 showDownloaded();

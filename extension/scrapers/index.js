@@ -1,15 +1,12 @@
 import { resolveDatePreset } from "./util.js";
 import { canonicalUrl, companyKey, normalizeWords } from "./history.js";
 import { cleanAbroadCodes, cleanCountryCodes, countryName } from "./countries.js";
-import { liveSources, sourceById, SOURCES } from "./sources.js";
+import { liveSources, sourceById } from "./sources.js";
 import { loadAdapter } from "./adapters.js";
 import { createHttp, SourceError } from "./http.js";
 import { createCache } from "./core/cache.js";
 import { runSource } from "./core/context.js";
 import { newReport, sourceLine } from "./core/diagnostics.js";
-
-/** Countries each source can search (null: any), for the popup's greyed-out countries. */
-export const BOARD_COUNTRIES = Object.fromEntries(SOURCES.map((s) => [s.id, s.countries]));
 
 // The whole run stops after 10 minutes, whatever the sources' own budgets
 const RUN_CAP_MS = 10 * 60e3;

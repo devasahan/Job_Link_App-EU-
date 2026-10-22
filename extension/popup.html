@@ -16,12 +16,10 @@
     </header>
 
     <form id="fetch-form" autocomplete="off">
-      <fieldset class="platforms">
+      <fieldset class="platforms sources">
         <legend>Platforms</legend>
-        <label class="check">
-          <input type="checkbox" name="site" value="indeed" checked />
-          Indeed <span class="hint">(remote)</span>
-        </label>
+        <!-- One collapsible group per kind of source, built from scrapers/sources.js -->
+        <div id="source-groups" class="source-groups"></div>
       </fieldset>
 
       <label class="field">
@@ -69,7 +67,7 @@
       </fieldset>
 
       <label class="field">
-        <span>Count</span>
+        <span>Count per source</span>
         <input
           id="count"
           name="count"
@@ -150,6 +148,10 @@
       <button type="button" id="forget-btn" class="link forget" hidden>Forget downloaded jobs</button>
 
       <button type="submit" id="ok-btn" class="ok">OK</button>
+      <p class="check-row">
+        <button type="button" id="check-btn" class="link">Check sources</button>
+        <span class="hint">asks every source for 3 recent jobs and shows which answer; no download</span>
+      </p>
     </form>
 
     <p id="status" class="status" role="status" aria-live="polite"></p>

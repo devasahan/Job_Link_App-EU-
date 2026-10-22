@@ -247,3 +247,55 @@ form {
 .status.success {
   color: var(--ok);
 }
+
+/* Platforms: one collapsible group per kind of source */
+.sources {
+  display: block;
+}
+
+.source-group + .source-group {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+.source-group summary {
+  display: list-item;
+  cursor: pointer;
+  padding: 2px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.source-group summary .hint {
+  margin-left: 6px;
+  font-weight: 400;
+}
+
+.source-group[open] summary {
+  margin-bottom: 4px;
+}
+
+.source-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 10px;
+}
+
+.source-grid .check {
+  padding: 2px 0;
+  font-size: 12px;
+}
+
+.source-group.off .source-grid {
+  opacity: 0.55;
+}
+
+.check-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: -4px 0 0;
+}
