@@ -40,6 +40,7 @@
       }
       .actions .link {
         font-size: 12px;
+        white-space: nowrap;
       }
       .results {
         margin-top: 16px;
@@ -75,13 +76,13 @@
         border-radius: 50%;
         background: var(--ok);
       }
-      .results li.incomplete::before {
+      .results li[data-status="incomplete"]::before {
         background: #b45309;
       }
-      .results li.failed::before {
+      .results li[data-status="failed"]::before {
         background: var(--danger);
       }
-      .results li.skipped::before {
+      .results li[data-status="skipped"]::before {
         background: var(--line);
       }
       .results .hint {

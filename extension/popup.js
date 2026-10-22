@@ -84,7 +84,7 @@ function renderSources() {
     label.textContent = group.label;
     const count = document.createElement("span");
     count.className = "hint group-count";
-    summary.append(label, count);
+    summary.append(label, " ", count);
     const pick = document.createElement("div");
     pick.className = "pick";
     for (const [which, text] of [

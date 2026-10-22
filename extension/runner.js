@@ -41,7 +41,8 @@ function showLive({ running, done, total, failed }) {
 function showSource(report) {
   resultsEl.hidden = false;
   const li = document.createElement("li");
-  li.className = report.status;
+  // Not a class: "ok" is the button style
+  li.dataset.status = report.status;
   li.dataset.source = report.id;
   li.textContent = finished.mode === "check" ? checkLine(report) : sourceLine(report);
   listEl.append(li);

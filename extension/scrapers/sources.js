@@ -55,7 +55,7 @@ export const SOURCES = [
     id: "indeed",
     label: "Indeed",
     group: "boards",
-    hint: "remote, by country",
+    hint: "by country",
     url: "https://www.indeed.com",
     module: "./boards/indeed.js",
     hosts: ["apis.indeed.com"],
