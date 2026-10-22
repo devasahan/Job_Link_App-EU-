@@ -4,6 +4,7 @@ import { installChromeStorage } from "./helpers/env.js";
 import { scrapeJobs } from "../extension/scrapers/index.js";
 import { loadDownloaded, rememberDownloaded } from "../extension/scrapers/history.js";
 import { SourceError } from "../extension/scrapers/http.js";
+import { sourceById } from "../extension/scrapers/sources.js";
 
 const realFetch = globalThis.fetch;
 afterEach(() => {
@@ -165,6 +166,46 @@ test("anonymous jobs merge by link only; Count applies per source (and per part)
   assert.equal(by("careers"), 4);
 });
 
+test("Count per source is applied to each source's own jobs before they merge: a shared job keeps its row", async () => {
+  const at = (h) => ({ date_posted: ago(h) });
+  const sources = [
+    source("indeedlike", async (ctx) =>
+      ctx.accept([
+        row("indeedlike", "i1", "Go Developer", "A", at(0.1)),
+        row("indeedlike", "i2", "Java Developer", "B", at(0.2)),
+        row("indeedlike", "i3", "Shared Backend Developer", "Shared", at(3)),
+      ]), { priority: 20 }),
+    source("board", async (ctx) =>
+      ctx.accept([row("board", "b1", "Shared Backend Developer", "Shared", at(1)), row("board", "b2", "Rust Developer", "C", at(2))])
+    ),
+  ];
+  const { jobs, merged } = await scrapeJobs({ ...base, count: 2, sites: ["indeedlike", "board"], sources });
+  assert.deepEqual(jobs.map((j) => `${j.site}: ${j.title}`), [
+    "indeedlike: Go Developer",
+    "indeedlike: Java Developer",
+    "board: Shared Backend Developer",
+    "board: Rust Developer",
+  ]);
+  assert.equal(merged, 0, "Indeed's copy was past its Count");
+});
+
+test("earlier downloads are left out per copy, before the merge, and counted once per job", async () => {
+  installChromeStorage();
+  await rememberDownloaded([{ title: "Senior Backend Engineer", company: "Acme", job_url: "https://board.test/jobs/1", site: "board" }]);
+  const sources = [
+    source("indeedlike", async (ctx) =>
+      ctx.accept([
+        row("indeedlike", "i1", "Senior Backend Engineer (m/w/d)", "Acme GmbH", { job_url: "https://de.indeed.test/viewjob?jk=9" }),
+        row("indeedlike", "i2", "Go Developer", "Beta"),
+      ]), { priority: 20 }),
+    source("board", async (ctx) => ctx.accept([row("board", "1", "Senior Backend Engineer", "Acme"), row("board", "2", "Go Developer", "Beta GmbH")])),
+  ];
+  const { jobs, skipped, merged } = await scrapeJobs({ ...base, sites: ["indeedlike", "board"], sources, downloaded: await loadDownloaded() });
+  assert.deepEqual(jobs.map((j) => `${j.site}: ${j.title} (also on: ${j.also_on})`), ["indeedlike: Go Developer (also on: Board)"]);
+  assert.equal(skipped, 1);
+  assert.equal(merged, 1);
+});
+
 test("one source failing, timing out or not loading leaves the others; a budget stop keeps what was found", async () => {
   const sources = [
     source("good", async (ctx) => ctx.accept([row("good", "g1", "Backend Developer", "Good")])),
@@ -269,4 +310,15 @@ test("your own country alone is nothing to search only when every ticked source 
   await assert.rejects(scrapeJobs({ ...base, countries: ["SE"], home: "SE", sites: ["bound"], sources: [bound, remote] }), /other than Sweden/);
   const { jobs } = await scrapeJobs({ ...base, countries: ["SE"], home: "SE", sites: ["bound", "remote"], sources: [bound, remote] });
   assert.equal(jobs.length, 1);
+});
+
+test("Indeed skipped: the reason is where you live when only your country is ticked, else the missing site", async () => {
+  const remote = source("remote", async (ctx) => ctx.accept([row("remote", "r1", "Backend Developer", "Remote Co")]));
+  const sources = [sourceById("indeed"), remote];
+  const home = await scrapeJobs({ ...base, countries: ["SE"], home: "SE", sites: ["indeed", "remote"], sources });
+  assert.equal(home.reports[0].status, "skipped");
+  assert.equal(home.reports[0].error, "only Sweden is ticked, where you live");
+  assert.equal(home.jobs.length, 1);
+  const noSite = await scrapeJobs({ ...base, countries: ["SE", "SI"], home: "SE", sites: ["indeed", "remote"], sources });
+  assert.equal(noSite.reports[0].error, "no Indeed site for Slovenia");
 });

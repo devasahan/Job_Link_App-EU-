@@ -1,5 +1,5 @@
 import { resolveDatePreset } from "./util.js";
-import { canonicalUrl, companyKey, normalizeWords } from "./history.js";
+import { canonicalUrl, mergeKey } from "./history.js";
 import { cleanAbroadCodes, cleanCountryCodes, countryName } from "./countries.js";
 import { liveSources, sourceById } from "./sources.js";
 import { loadAdapter } from "./adapters.js";
@@ -21,12 +21,14 @@ function stopper(ms, why) {
   return { controller, signal: controller.signal, clear: () => clearTimeout(timer) };
 }
 
-/** The key a job is merged by: title + company without its legal form, or its link when the employer is hidden. */
+const newestFirst = (a, b) => String(b.date_posted || "").localeCompare(String(a.date_posted || ""));
+
+/**
+ * The key a job is merged by: title + company without its legal form (one of
+ * the keys history.js remembers it by), or its link when the employer is hidden.
+ */
 export function dedupeKey(job) {
-  const title = normalizeWords(globalThis.jbStripGender ? globalThis.jbStripGender(job.title) : job.title);
-  const company = job.anonymous ? "" : companyKey(job.company);
-  if (title && company) return `job:${title}|${company}`;
-  return job.job_url ? `url:${canonicalUrl(job.job_url)}` : "";
+  return mergeKey(job) || (job.job_url ? `url:${canonicalUrl(job.job_url)}` : "");
 }
 
 /**
@@ -36,10 +38,7 @@ export function dedupeKey(job) {
  * found. Returns { jobs, merged }.
  */
 export function mergeSources(jobs, labelOf = (id) => sourceById(id)?.label || id) {
-  const order = [...jobs].sort(
-    (a, b) =>
-      (a._priority ?? 99) - (b._priority ?? 99) || String(b.date_posted || "").localeCompare(String(a.date_posted || ""))
-  );
+  const order = [...jobs].sort((a, b) => (a._priority ?? 99) - (b._priority ?? 99) || newestFirst(a, b));
   const byKey = new Map();
   const out = [];
   let merged = 0;
@@ -262,27 +261,30 @@ export async function scrapeJobs({
   }
   const incomplete = ordered.filter((r) => r.status === "incomplete").map((r) => r.label);
 
-  // One row per job across sources (and across a source's own countries)
-  const labelOf = (id) => picked.find((s) => s.id === id)?.label || sourceById(id)?.label || id;
-  let { jobs, merged } = mergeSources(results.flatMap((r) => r.jobs), labelOf);
-  merged += ordered.reduce((n, r) => n + (r.merged || 0), 0);
-
-  // Leave out earlier downloads, then Count per source (each part of a source is one)
-  let skipped = 0;
-  const perSource = {};
-  jobs = jobs.filter((job) => {
-    if (downloaded?.has(job)) {
-      skipped += 1;
-      return false;
-    }
-    const key = job._part ? `${job.site}:${job._part}` : job.site;
-    perSource[key] = (perSource[key] || 0) + 1;
-    return perSource[key] <= (check ? CHECK_WANTED : resultsWanted);
+  // Leave out earlier downloads, then Count per source (each part of a source is
+  // one), on each source's own jobs before they merge: a job another source also
+  // found keeps its row even when the winning copy is past its own source's Count
+  const limit = check ? CHECK_WANTED : resultsWanted;
+  const skippedJobs = new Set();
+  const trimmed = results.flatMap((r) => {
+    const perPart = {};
+    return r.jobs
+      .filter((job) => {
+        if (!downloaded?.has(job)) return true;
+        // A job, not each copy of it
+        skippedJobs.add(dedupeKey(job) || `${job.site}:${job._id}`);
+        return false;
+      })
+      .sort(newestFirst)
+      .filter((job) => (perPart[job._part || ""] = (perPart[job._part || ""] || 0) + 1) <= limit);
   });
 
-  jobs = jobs
-    .sort((a, b) => String(b.date_posted || "").localeCompare(String(a.date_posted || "")))
-    .map(publicJob);
-  return { jobs, errors, skipped, incomplete, reports: ordered, merged, datePreset: preset };
+  // One row per job across sources (and across a source's own countries)
+  const labelOf = (id) => picked.find((s) => s.id === id)?.label || sourceById(id)?.label || id;
+  let { jobs, merged } = mergeSources(trimmed, labelOf);
+  merged += ordered.reduce((n, r) => n + (r.merged || 0), 0);
+
+  jobs = jobs.sort(newestFirst).map(publicJob);
+  return { jobs, errors, skipped: skippedJobs.size, incomplete, reports: ordered, merged, datePreset: preset };
 }
 

@@ -13,6 +13,10 @@ export async function run(ctx) {
   const { opts } = ctx;
   const { targets, noSite } = indeedTargets(opts);
   if (!targets.length) {
+    // Nothing without a site left: only the user's own country was ticked (its jobs are left out)
+    if (!noSite.length && opts.home) {
+      throw new SourceError("skipped", `only ${countryName(opts.home)} is ticked, where you live`);
+    }
     const names = noSite.map(countryName).join(", ");
     throw new SourceError("skipped", `no Indeed site for ${names || "the ticked countries"}`);
   }
