@@ -1,0 +1,31 @@
+{
+  "hits": [
+    {
+      "created_at": "{{ago:25d}}",
+      "author": "hiring45200201",
+      "comment_text": "Septima | Backend Engineer | Remote (EU) | Full-time<p>Kotlin and Postgres.",
+      "story_id": 45100000,
+      "parent_id": 45100000,
+      "created_at_i": "{{ago:25d|unix}}",
+      "objectID": "45200201"
+    },
+    {
+      "created_at": "{{ago:24d}}",
+      "author": "hiring45200202",
+      "comment_text": "Still hiring?",
+      "story_id": 45100000,
+      "parent_id": 45200201,
+      "created_at_i": "{{ago:24d|unix}}",
+      "objectID": "45200202"
+    }
+  ],
+  "nbHits": 2,
+  "page": 0,
+  "nbPages": 1,
+  "hitsPerPage": 1000,
+  "exhaustiveNbHits": true,
+  "exhaustiveTypo": true,
+  "query": "",
+  "params": "tags=comment%2Cstory_45500000&hitsPerPage=1000",
+  "processingTimeMS": 3
+}
