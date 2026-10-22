@@ -106,9 +106,10 @@ function refreshCountries() {
     picked.includes(home) ? `not ${countryName(home)}` : "",
     uncovered.length ? `${uncovered.length} not searched` : "",
   ].filter(Boolean);
-  countrySummary.textContent = picked.length
-    ? [describeCountries(picked), ...notes].join(" · ")
-    : "none";
+  // "All EU (27) · not Sweden", but "Germany · not Sweden" rather than naming it twice
+  const named = describeCountries(picked);
+  const shown = named.startsWith("All EU") ? named : describeCountries(picked.filter((code) => code !== home));
+  countrySummary.textContent = picked.length ? [shown || "none", ...notes].join(" · ") : "none";
   countryNote.hidden = !uncovered.length;
   countryNote.textContent = uncovered.length
     ? `Not searched (no site on the ticked platforms): ${uncovered.join(", ")}.`
