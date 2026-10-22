@@ -328,11 +328,11 @@
    "title": "SAP RAP/CAP Entwickler (m/w/d)",
    "location": "",
    "text": "100% Remote Work [...] 3 Monate Workation (europaweit)",
-   "label": "required",
+   "label": "not",
    "home": "SE",
    "also": {},
-   "home_note": "required for any home except DE (implicit; same posting as n074 which is explicit)",
-   "why": "'europaweit' belongs to a Workation perk (temporary work abroad). It does NOT open the job to EU residents; on the contrary a time-boxed Workation presupposes a German home base (IMPLICIT required). The posting also says 'deutschlandweit bis zu 100% Remote' (n074).",
+   "home_note": "not required for any home (a perk alone)",
+   "why": "A workation perk (temporary work abroad) says nothing about where the hire lives, and 'europaweit' belongs to it, so it opens nothing either. The same posting's 'deutschlandweit bis zu 100% Remote' is n074.",
    "source": "https://www.stepstone.de/jobs/remote-developer/in-mainz (verbatim fragments from search-result snippet)"
   },
   {
@@ -1218,11 +1218,11 @@
    "title": "Workplace IT Engineer",
    "location": "",
    "text": "remote work from anywhere in the EU for up to 10 consecutive days at a time, and up to 60 days a year",
-   "label": "required",
+   "label": "not",
    "home": "SE",
    "also": {},
-   "home_note": "required for any home except DE (implicit)",
-   "why": "IMPLICIT: a cap on days worked from elsewhere in the EU presupposes a home base in Germany (Berlin office). Weaker than an explicit Wohnsitz line — treat as required only when no EU-open phrase is present.",
+   "home_note": "not required for any home (a perk alone)",
+   "why": "A perk: a cap on days worked from elsewhere in the EU says nothing about where the hire lives (no residence line), and 'anywhere in the EU' belongs to the perk, so it opens nothing either.",
    "source": "https://de.indeed.com/q-remote-eu-ausland-informatik-jobs.html (lemon.markets; fragment as reported by search result)"
   },
   {
@@ -1232,11 +1232,11 @@
    "title": "Kubernetes Engineer (m/w/d)",
    "location": "",
    "text": "bis zu 20 Tage Arbeiten aus dem EU-Ausland",
-   "label": "required",
+   "label": "not",
    "home": "SE",
    "also": {},
-   "home_note": "required for any home except DE (implicit)",
-   "why": "IMPLICIT: 'EU-Ausland' = EU countries other than Germany; a 20-day cap means you normally work from Germany. (Reported as 'work from abroad within the EU for up to 20 days'; German wording reconstructed.)",
+   "home_note": "not required for any home (a perk alone)",
+   "why": "A perk: 'bis zu 20 Tage … aus dem EU-Ausland' caps time away from home but never says where home must be.",
    "source": "https://de.indeed.com/q-remote-eu-ausland-l-home-office-jobs.html (Dembach Goo Informatik; meaning as reported by search result, German wording not verbatim)"
   },
   {
