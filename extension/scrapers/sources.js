@@ -82,7 +82,6 @@ export const SOURCES = [
     gaps: { "himalayas.app": 800 },
     headerRule: 2,
   },
-  // 2.4.0 adapters being built: each is replaced by the entry its agent hands back
   {
     id: "jobicy",
     label: "Jobicy",
@@ -92,7 +91,6 @@ export const SOURCES = [
     module: "./boards/jobicy.js",
     hosts: ["jobicy.com"],
     defaultOn: true,
-    pending: true,
   },
   {
     id: "hackernews",
@@ -104,7 +102,6 @@ export const SOURCES = [
     hosts: ["hn.algolia.com"],
     defaultOn: true,
     priority: 40,
-    pending: true,
   },
   {
     id: "euremotejobs",
@@ -116,20 +113,18 @@ export const SOURCES = [
     hosts: ["euremotejobs.com"],
     defaultOn: true,
     robots: "obey",
-    pending: true,
   },
   {
     id: "arc",
     label: "Arc.dev",
     group: "boards",
-    hint: "remote, free profile",
+    hint: "free profile (fragile)",
     url: "https://arc.dev",
     module: "./boards/arc.js",
     hosts: ["arc.dev"],
     defaultOn: false,
     gaps: { "arc.dev": 1500 },
     robots: "obey",
-    pending: true,
   },
 ].map(withDefaults);
 

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "JobBridge EU",
-  "version": "2.3.0",
-  "description": "Fetch remote developer jobs open to EU countries from Indeed (EU sites plus UK, Canada and US employers hiring in Europe), then download Excel.",
+  "version": "2.4.0",
+  "description": "Fetch remote developer jobs open to people in the EU from Indeed, Himalayas, Jobicy, Hacker News and more, then download Excel.",
   "action": {
     "default_popup": "popup.html",
     "default_title": "JobBridge EU",
@@ -23,7 +23,11 @@
   ],
   "host_permissions": [
     "https://apis.indeed.com/*",
-    "https://himalayas.app/*"
+    "https://himalayas.app/*",
+    "https://jobicy.com/*",
+    "https://hn.algolia.com/*",
+    "https://euremotejobs.com/*",
+    "https://arc.dev/*"
   ],
   "declarative_net_request": {
     "rule_resources": [
