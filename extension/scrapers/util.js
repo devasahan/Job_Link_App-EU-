@@ -46,10 +46,14 @@ export function sleep(ms) {
 
 export function stripHtml(html) {
   if (!html) return "";
-  // Keep "<li>React</li><li>AWS</li>" from becoming "ReactAWS"
-  const spaced = String(html).replace(BLOCK_TAG_RE, " $&");
+  // A block tag starts a line: "<li>React</li><li>AWS</li>" doesn't become "ReactAWS", and each list
+  // item or paragraph stays its own sentence for the checks that read one at a time
+  const spaced = String(html).replace(BLOCK_TAG_RE, "\n$&");
   const doc = new DOMParser().parseFromString(spaced, "text/html");
-  return (doc.body.textContent || "").replace(/\s+/g, " ").trim();
+  return (doc.body.textContent || "")
+    .replace(/[^\S\n]+/g, " ")
+    .replace(/ ?\n\s*/g, "\n")
+    .trim();
 }
 
 export function formatLocation(parts) {
