@@ -450,3 +450,49 @@ test("a page whose jobs were all seen under another search still ends the paging
   await scrapeIndeed({ countries: ["DE"], title: "Backend Developer", resultsWanted: 5, datePreset: "today" });
   assert.deepEqual(calls.map((c) => c.query.match(/what: "([^"]*)"/)[1]), ["Backend Developer", "Backend Entwickler"]);
 });
+
+test("where the user lives isn't searched, its jobs are left out, and abroad jobs must be open to it", async () => {
+  mockFetch((country) => {
+    if (country === "US") {
+      return page([
+        rawJob("us-se", { title: "Backend Engineer", description: { html: "<p>Open to candidates based in Sweden.</p>" }, location: { countryCode: "US" } }),
+        rawJob("us-de", { title: "Platform Engineer", description: { html: "<p>Open to candidates based in Germany.</p>" }, location: { countryCode: "US" } }),
+      ]);
+    }
+    // The German site lists one job in Sweden
+    return page([rawJob("de1"), rawJob("de-se", { title: "Frontend Developer", location: { countryCode: "SE" } })]);
+  });
+  const log = [];
+  const jobs = await scrapeIndeed({
+    countries: ["DE", "SE"],
+    abroad: ["US"],
+    home: "SE",
+    resultsWanted: 10,
+    datePreset: "today",
+    onProgress: (m) => log.push(m),
+  });
+  assert.deepEqual(calls.filter((c) => c.country === "SE"), []);
+  assert.deepEqual(jobs.map((j) => j.job_url.split("jk=")[1]).sort(), ["de1", "us-se"]);
+  assert.ok(log.some((m) => /1 in your country/.test(m)), log.join("\n"));
+});
+
+test("with where the user lives set, a job elsewhere that requires living there is left out", async () => {
+  globalThis.jbResidenceRequired = (job) => ({ required: /innerhalb Deutschlands/.test(job.description), reason: "" });
+  try {
+    mockFetch(() =>
+      page([
+        rawJob("de1"),
+        rawJob("de-only", { description: { html: "<p>100% Homeoffice innerhalb Deutschlands.</p>" } }),
+      ])
+    );
+    const log = [];
+    const withHome = await scrapeIndeed({ countries: ["DE"], home: "SE", resultsWanted: 10, datePreset: "today", onProgress: (m) => log.push(m) });
+    assert.deepEqual(withHome.map((j) => j.job_url.split("jk=")[1]), ["de1"]);
+    assert.ok(log.some((m) => /1 only for people living in their country/.test(m)), log.join("\n"));
+    // Not set: nothing to compare with, so the job stays
+    const noHome = await scrapeIndeed({ countries: ["DE"], resultsWanted: 10, datePreset: "today" });
+    assert.equal(noHome.length, 2);
+  } finally {
+    delete globalThis.jbResidenceRequired;
+  }
+});

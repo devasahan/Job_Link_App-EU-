@@ -1,5 +1,5 @@
 import { downloadedCount, forgetDownloaded } from "./scrapers/history.js";
-import { ALL_COUNTRIES, EU_CODES, describeCountries } from "./scrapers/countries.js";
+import { ALL_COUNTRIES, EU_CODES, countryName, describeCountries } from "./scrapers/countries.js";
 import { BOARD_COUNTRIES } from "./scrapers/index.js";
 import { DATE_PRESETS } from "./scrapers/util.js";
 
@@ -9,6 +9,7 @@ const okBtn = document.getElementById("ok-btn");
 const countryList = document.getElementById("country-list");
 const countrySummary = document.getElementById("country-summary");
 const countryNote = document.getElementById("country-note");
+const homeSelect = document.getElementById("home");
 
 const STORAGE_KEYS = [
   "title",
@@ -17,6 +18,7 @@ const STORAGE_KEYS = [
   "sites",
   "countries",
   "abroad",
+  "home",
   "date_preset",
   "years",
   "job_type",
@@ -78,19 +80,34 @@ function renderCountries() {
   }
 }
 
-/** Summary line, greyed-out countries no ticked board covers, and the note about them. */
+function renderHome() {
+  const byName = [...ALL_COUNTRIES].sort((a, b) => a.name.localeCompare(b.name));
+  for (const { code, name } of byName) homeSelect.append(new Option(name, code));
+}
+
+/** Summary line, greyed-out countries (no ticked board covers them, or you live there), and the note. */
 function refreshCountries() {
   const covered = coveredCountries();
+  const home = homeSelect.value;
   const uncovered = [];
   for (const box of countryBoxes()) {
-    const off = !covered.has(box.value);
+    const mine = box.value === home;
+    const off = mine || !covered.has(box.value);
     box.parentElement.classList.toggle("uncovered", off);
-    box.parentElement.title = off ? "No ticked platform has a site for this country" : "";
-    if (off && box.checked) uncovered.push(box.parentElement.textContent.trim());
+    box.parentElement.title = mine
+      ? "You live here: its jobs are left out"
+      : off
+        ? "No ticked platform has a site for this country"
+        : "";
+    if (off && !mine && box.checked) uncovered.push(box.parentElement.textContent.trim());
   }
   const picked = selectedCountries();
+  const notes = [
+    picked.includes(home) ? `not ${countryName(home)}` : "",
+    uncovered.length ? `${uncovered.length} not searched` : "",
+  ].filter(Boolean);
   countrySummary.textContent = picked.length
-    ? describeCountries(picked) + (uncovered.length ? ` · ${uncovered.length} not searched` : "")
+    ? [describeCountries(picked), ...notes].join(" · ")
     : "none";
   countryNote.hidden = !uncovered.length;
   countryNote.textContent = uncovered.length
@@ -125,6 +142,7 @@ async function restoreForm() {
       el.checked = saved.countries.includes(el.value);
     });
   }
+  if (ALL_COUNTRIES.some((c) => c.code === saved.home)) homeSelect.value = saved.home;
   if (Array.isArray(saved.abroad)) {
     abroadBoxes().forEach((el) => {
       el.checked = saved.abroad.includes(el.value);
@@ -159,7 +177,7 @@ form.querySelectorAll("[data-countries]").forEach((button) => {
 });
 
 form.addEventListener("change", (event) => {
-  if (event.target.name === "site" || event.target.name === "country") refreshCountries();
+  if (["site", "country", "home"].includes(event.target.name)) refreshCountries();
 });
 
 form.addEventListener("submit", async (event) => {
@@ -182,6 +200,7 @@ form.addEventListener("submit", async (event) => {
   const sites = selectedSites();
   const countries = selectedCountries();
   const abroad = selectedAbroad();
+  const home = homeSelect.value;
   const skipDownloaded = form.skip_downloaded.checked;
 
   if (!sites.length) {
@@ -193,8 +212,13 @@ form.addEventListener("submit", async (event) => {
     document.getElementById("countries").open = true;
     return;
   }
+  if (home && !abroad.length && countries.every((code) => code === home)) {
+    setStatus(`Tick a country other than ${countryName(home)}, where you live.`, "error");
+    document.getElementById("countries").open = true;
+    return;
+  }
   const covered = coveredCountries();
-  if (![...countries, ...abroad].some((code) => covered.has(code))) {
+  if (![...countries.filter((code) => code !== home), ...abroad].some((code) => covered.has(code))) {
     setStatus("The ticked platforms have no site for any selected country.", "error");
     document.getElementById("countries").open = true;
     return;
@@ -210,12 +234,13 @@ form.addEventListener("submit", async (event) => {
     sites,
     countries,
     abroad,
+    home,
     date_preset: datePreset,
     years,
     job_type: jobType,
     known_sites: siteBoxes().map((el) => el.value),
     skip_downloaded: skipDownloaded,
-    pendingFetch: { title, stack, count, sites, countries, abroad, datePreset, years, jobType, skipDownloaded },
+    pendingFetch: { title, stack, count, sites, countries, abroad, home, datePreset, years, jobType, skipDownloaded },
   });
 
   await chrome.tabs.create({
@@ -226,5 +251,6 @@ form.addEventListener("submit", async (event) => {
 });
 
 renderCountries();
+renderHome();
 restoreForm();
 showDownloaded();

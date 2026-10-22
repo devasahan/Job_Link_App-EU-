@@ -77,4 +77,6 @@ test("a run with titles and earlier downloads", async () => {
 test("a run needs a platform and a country", async () => {
   await assert.rejects(scrapeJobs({ sites: [], countries: ["DE"] }), /platform/);
   await assert.rejects(scrapeJobs({ sites: ["indeed"], countries: [] }), /country/);
+  // Only the country the user lives in: nothing left to search
+  await assert.rejects(scrapeJobs({ sites: ["indeed"], countries: ["SE"], home: "SE" }), /other than Sweden/);
 });

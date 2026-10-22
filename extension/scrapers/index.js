@@ -6,7 +6,7 @@ import {
   resolveDatePreset,
 } from "./util.js";
 import { normalizeWords } from "./history.js";
-import { cleanAbroadCodes, cleanCountryCodes } from "./countries.js";
+import { cleanAbroadCodes, cleanCountryCodes, countryName } from "./countries.js";
 
 // More boards plug in here: (opts) => Promise<job[]>, see scrapeIndeed
 const SCRAPERS = {
@@ -26,6 +26,7 @@ export const BOARD_COUNTRIES = {
  *   sites: string[],
  *   countries: string[],
  *   abroad?: string[],
+ *   home?: string,
  *   title: string,
  *   stack: string,
  *   count: number,
@@ -35,6 +36,8 @@ export const BOARD_COUNTRIES = {
  *   downloaded?: { has(job): boolean, recentCount(site: string, hours: number): number },
  *   onProgress?: (msg: string) => void
  * }} opts
+ * With `home` (where the user lives), jobs in that country are left out, and
+ * so are jobs elsewhere that say you must live there.
  * With `downloaded`, jobs from earlier downloads are left out (counted in
  * `skipped`) and each board is asked for more, so Count new jobs still fit.
  * `incomplete` names the boards that stopped early.
@@ -43,6 +46,7 @@ export async function scrapeJobs({
   sites,
   countries,
   abroad,
+  home,
   title,
   stack,
   count,
@@ -62,6 +66,10 @@ export async function scrapeJobs({
     throw new Error("Select at least one country");
   }
   const abroadCodes = cleanAbroadCodes(abroad);
+  const homeCode = cleanCountryCodes([home])[0] || "";
+  if (homeCode && !abroadCodes.length && countryCodes.every((code) => code === homeCode)) {
+    throw new Error(`Select a country other than ${countryName(homeCode)}, where you live`);
+  }
 
   const preset = resolveDatePreset(datePreset);
   const resultsWanted = Math.max(1, Math.min(200, Number(count) || 50));
@@ -85,6 +93,7 @@ export async function scrapeJobs({
         stack: stackQ,
         countries: countryCodes,
         abroad: abroadCodes,
+        home: homeCode,
         resultsWanted: Math.min(400, resultsWanted + repeats),
         datePreset: preset.id,
         years,

@@ -315,6 +315,7 @@ const transientFailure = (res, data) =>
  *   stack?: string,
  *   countries: string[],
  *   abroad?: string[],
+ *   home?: string,
  *   resultsWanted: number,
  *   datePreset?: string,
  *   years?: number | "",
@@ -327,6 +328,7 @@ export async function scrapeIndeed({
   stack,
   countries,
   abroad,
+  home,
   resultsWanted,
   datePreset,
   years,
@@ -335,12 +337,14 @@ export async function scrapeIndeed({
 }) {
   const preset = resolveDatePreset(datePreset);
   const titleFilter = (title || "").trim();
-  const wanted = new Set(countries || []);
+  // Where the user lives isn't searched: they want jobs from other countries
+  const wanted = new Set((countries || []).filter((code) => code !== home));
   const abroadSites = new Set((abroad || []).filter((code) => INDEED_SITES[code] && !wanted.has(code)));
   const targets = [...[...wanted].filter((code) => INDEED_SITES[code]), ...abroadSites];
   const noSite = [...wanted].filter((code) => !INDEED_SITES[code]);
-  // Names a job abroad may give for where it hires: the ticked countries in English and their own language
-  const openToNames = [...wanted].flatMap((code) => countryNames(code));
+  // Names a job abroad may give for where it hires, in English and their own language: where the
+  // user lives, or with that not set the ticked countries
+  const openToNames = home ? countryNames(home) : [...wanted].flatMap((code) => countryNames(code));
   if (noSite.length) {
     onProgress?.(`Indeed has no site for ${noSite.map(countryName).join(", ")}: not searched`);
   }
@@ -355,6 +359,8 @@ export async function scrapeIndeed({
   let elsewhere = 0;
   let notOpen = 0;
   let notRemote = 0;
+  let inHome = 0;
+  let residentsOnly = 0;
   // What each check left out, for the run summary
   const dropped = { old: 0, title: 0, stack: 0, type: 0, years: 0 };
   let styleIndex = 0;
@@ -457,9 +463,17 @@ export async function scrapeIndeed({
               continue;
             }
             job.open_to = open.to;
+          } else if (home && job.country === home) {
+            // Placed where the user lives (an EU site can list a job in another country)
+            inHome += 1;
+            continue;
           } else if (!wanted.has(job.country)) {
             // A job placed in a country that isn't ticked isn't open to the ticked ones
             elsewhere += 1;
+            continue;
+          } else if (home && globalThis.jbResidenceRequired?.(job, { country: job.country, home }).required) {
+            // "Homeoffice innerhalb Deutschlands", "must live in the Netherlands": not from where the user lives
+            residentsOnly += 1;
             continue;
           } else {
             job.open_to = countryName(job.country);
@@ -512,6 +526,8 @@ export async function scrapeIndeed({
     [dropped.stack, "without the stack words"],
     [notRemote, "hybrid or not remote"],
     [elsewhere, "placed in other countries"],
+    [inHome, "in your country"],
+    [residentsOnly, "only for people living in their country"],
     [notOpen, "abroad, not open to Europe"],
   ]
     .filter(([n]) => n)

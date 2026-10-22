@@ -77,7 +77,7 @@ async function run() {
     return;
   }
 
-  const { title, stack, count, sites, countries, abroad, datePreset, years, jobType, skipDownloaded } =
+  const { title, stack, count, sites, countries, abroad, home, datePreset, years, jobType, skipDownloaded } =
     pendingFetch;
   await chrome.storage.local.remove("pendingFetch");
 
@@ -96,7 +96,7 @@ async function run() {
   // Older settings have no skipDownloaded: skipping is the default
   const downloaded = skipDownloaded === false ? null : await loadDownloaded();
   log(
-    `Platforms: ${sites.join(", ")}\nCountries: ${describeCountries(countries)}\nCount (per site): ${count}\nPosted: ${preset.label}\nType: ${typeLabel}\nYears: ${yearsLabel}\nEmployers abroad: ${cleanAbroadCodes(abroad).map(countryName).join(", ") || "—"}\nTitle: ${title || "any developer role"}\nStack: ${stack || "—"}\nFilters: remote · open to the selected countries\nAlready downloaded: ${downloaded ? `skipped (${downloaded.size} remembered)` : "included"}`
+    `Platforms: ${sites.join(", ")}\nCountries: ${describeCountries(countries)}\nCount (per site): ${count}\nPosted: ${preset.label}\nType: ${typeLabel}\nYears: ${yearsLabel}\nYou live in: ${home ? `${countryName(home)} (its jobs are left out)` : "—"}\nEmployers abroad: ${cleanAbroadCodes(abroad).map(countryName).join(", ") || "—"}\nTitle: ${title || "any developer role"}\nStack: ${stack || "—"}\nFilters: remote · open to the selected countries\nAlready downloaded: ${downloaded ? `skipped (${downloaded.size} remembered)` : "included"}`
   );
   setStatus("Fetching remote developer jobs open to the EU from selected platforms…");
 
@@ -105,6 +105,7 @@ async function run() {
       sites,
       countries,
       abroad,
+      home,
       title,
       stack,
       count,
