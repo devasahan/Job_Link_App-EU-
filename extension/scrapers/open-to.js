@@ -20,9 +20,10 @@
  *   3. listed in a European country that isn't ticked → elsewhere;
  *   4. listed in the UK, Canada or US not ticked under Employers abroad → abroadOff;
  *   5. a "who may apply" list (or what an empty one means), narrowed by the
- *      time-zone window: none of T → restricted; with home set and the job
- *      saying you must live elsewhere → residentsOnly; else open to the
- *      region or the T countries it names;
+ *      time-zone window (and, with home not set, by "you must be based in
+ *      …"): none of T → restricted; with home set and the job saying you
+ *      must live elsewhere → residentsOnly; else open to the region or the T
+ *      countries it names;
  *   6. listed in a ticked European country: with home set the residence
  *      check, else open (Indeed's rule);
  *   7. anything else (outside Europe, plain "Remote"): the posting must say
@@ -63,14 +64,20 @@
   const NOT_REMOTE_RE = words("(?:not|no|non)[\\s-]+remote|remote\\s*:\\s*no");
   const REMOTE_RE = words(REMOTE);
 
-  // Description phrases about this job, not the company's policy ("we offer a hybrid model")
+  // Description phrases about this job, not the company's policy ("we offer a hybrid model");
+  // "this role is hybrid or remote" can be done remotely
   const JOB = "(?:role|position|job|opportunity|vacancy)";
-  const DESC_HYBRID_RE = words(
-    `(?:this|the)\\s+${JOB}\\s+(?:is|will\\s+be)\\s+(?:a\\s+)?hybrid|(?:this\\s+is\\s+)an?\\s+hybrid\\s+${JOB}|(?:\\d|one|two|three|four)\\s+days?\\s+(?:a|per|each)\\s+week\\s+(?:in|at|from)\\s+(?:the|our)(?:\\s+[\\p{L}-]+)?\\s+office`
-  );
+  const HYBRID_SAID = `(?:this|the)\\s+${JOB}\\s+(?:is|will\\s+be)\\s+(?:a\\s+)?hybrid(?!\\s*(?:or|/)\\s*(?:fully\\s+)?remote)|(?:this\\s+is\\s+)an?\\s+hybrid\\s+${JOB}`;
+  const OFFICE_DAYS = "(?:\\d|one|two|three|four)\\s+days?\\s+(?:a|per|each)\\s+week\\s+(?:in|at|from)\\s+(?:the|our)(?:\\s+[\\p{L}-]+)?\\s+office";
+  const DESC_HYBRID_RE = words(`${HYBRID_SAID}|${OFFICE_DAYS}`);
+  // Under a "Remote" location only a plain statement counts: "optional 2 days a week in our office" is still remote
+  const DESC_HYBRID_SAID_RE = words(HYBRID_SAID);
+  const ONSITE_SAID = `(?:this|the)\\s+${JOB}\\s+is\\s+(?:fully\\s+|100%\\s+)?(?:on[\\s-]?site|office[\\s-]based|in[\\s-]office|in[\\s-]person)|this\\s+is\\s+(?:an?\\s+)?(?:on[\\s-]?site|office[\\s-]based|in[\\s-]office|in[\\s-]person)\\s+${JOB}|(?:this\\s+is\\s+)?not\\s+a\\s+remote\\s+${JOB}`;
+  // "No remote work" may only limit where from ("…from outside Germany"): not under a "Remote" location
   const DESC_ONSITE_RE = words(
-    `(?:this|the)\\s+${JOB}\\s+is\\s+(?:fully\\s+|100%\\s+)?(?:on[\\s-]?site|office[\\s-]based|in[\\s-]office|in[\\s-]person)|this\\s+is\\s+(?:an?\\s+)?(?:on[\\s-]?site|office[\\s-]based|in[\\s-]office|in[\\s-]person)\\s+${JOB}|(?:this\\s+is\\s+)?not\\s+a\\s+remote\\s+${JOB}|(?:remote\\s+work|working\\s+remotely)\\s+is\\s+not\\s+(?:possible|available|an\\s+option)|no\\s+remote\\s+(?:work|option)s?`
+    `${ONSITE_SAID}|(?:remote\\s+work|working\\s+remotely)\\s+is\\s+not\\s+(?:possible|available|an\\s+option)|no\\s+remote\\s+(?:work|option)s?`
   );
+  const DESC_ONSITE_SAID_RE = words(ONSITE_SAID);
 
   /** "hybrid" | "onsite" | "remote" from one short field (title, location), or null. */
   function fieldWorkplace(text, isTitle) {
@@ -88,19 +95,23 @@
    * Where the job is done, read from the posting when the source doesn't say:
    * the title, then the location, then strong description phrases ("this role
    * is hybrid", "3 days a week in our Berlin office", "this is not a remote
-   * position"). `cheap` reads the title and location only.
+   * position"). A plain "Remote (Germany)" location is often the board's own
+   * label, so the description may still say the job is hybrid or on-site;
+   * office days or "no remote work" alone don't overrule it. `cheap` reads
+   * the title and location only.
    * @returns {"hybrid" | "onsite" | "remote" | null}
    */
   function jbWorkplaceFromText(job, { cheap = false } = {}) {
     const fromTitle = fieldWorkplace(job?.title, true);
     if (fromTitle) return fromTitle;
     const fromLocation = fieldWorkplace(job?.location, false);
-    if (fromLocation) return fromLocation;
-    if (cheap) return null;
+    // Hybrid, on-site, or "Remote or Hybrid" in the location settles it
+    if (fromLocation && (fromLocation !== "remote" || EITHER_RE.test(fold(job?.location)))) return fromLocation;
+    if (cheap) return fromLocation;
     const d = fold(job?.description).slice(0, 20000);
-    if (DESC_ONSITE_RE.test(d)) return "onsite";
-    if (DESC_HYBRID_RE.test(d)) return "hybrid";
-    return null;
+    if ((fromLocation ? DESC_ONSITE_SAID_RE : DESC_ONSITE_RE).test(d)) return "onsite";
+    if ((fromLocation ? DESC_HYBRID_SAID_RE : DESC_HYBRID_RE).test(d)) return "hybrid";
+    return fromLocation;
   }
 
   const europeanCodes = () => globalThis.jbCountriesInUtc(-24, 24);
@@ -165,27 +176,37 @@
     const list = structured(w);
     if (list) {
       let codes = new Set(list.codes);
+      let label = list.label;
+      let why = list.why;
       const utc = Array.isArray(w.utc) && w.utc.length === 2 ? w.utc : null;
+      const window = utc ? `${utcText(Math.min(...utc))} to ${utcText(Math.max(...utc))}` : "";
       if (utc) {
         const inWindow = new Set(globalThis.jbCountriesInUtc(utc[0], utc[1]));
         codes = new Set([...codes].filter((c) => inWindow.has(c)));
+        // A region the window cuts is that region in those hours, whoever T is
+        if (label && codes.size < list.codes.length) label = `${label === "Worldwide" ? "Europe" : label} (${window})`;
+        why = `${why}, ${window}`;
       }
-      const window = utc ? `${utcText(Math.min(...utc))} to ${utcText(Math.max(...utc))}` : "";
+      // With home unset, "you must be based in Germany" narrows the list the way
+      // rule 7 reads the same words (with home set, the residence check below
+      // decides); "based in the EU" leaves every European country in
+      if (!home && !cheap) {
+        const must = residentsOnly(job, listed, "");
+        const read = must ? globalThis.jbReadPlaces(must.reason) : null;
+        if (read?.codes.length && !read.wide) {
+          codes = new Set([...codes].filter((c) => read.codes.includes(c)));
+          label = null;
+          why = must.reason;
+        }
+      }
       const covered = T.filter((c) => codes.has(c));
-      if (!covered.length) return closed("restricted", window ? `${list.why}, ${window}` : list.why);
+      if (!covered.length) return closed("restricted", why);
       if (home) {
         if (cheap) return { open: true, to: "", pending: true };
         const must = residentsOnly(job, listed, home);
         if (must) return closed("residentsOnly", must.reason);
       }
-      // A region covers every T country unless the window cut some out
-      const to =
-        list.label && covered.length === T.length
-          ? list.label
-          : list.label
-            ? `${list.label === "Worldwide" ? "Europe" : list.label} (${window})`
-            : namesText(covered);
-      return { open: true, to };
+      return { open: true, to: label || namesText(covered) };
     }
 
     // 6. Listed in a ticked European country

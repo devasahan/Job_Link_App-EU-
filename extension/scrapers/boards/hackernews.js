@@ -16,7 +16,9 @@
  * names a city or country without one is on-site. Who may apply is never
  * structured here: open-to.js rule 7 reads the posting (jbOpenToEurope), with
  * the header's place parts as the location ("REMOTE (EU)", "Remote (US only)",
- * "CET ±3h"), so a plain "Remote" with nothing about Europe is left out.
+ * "CET ±3h"), so a plain "Remote" with nothing about Europe is left out. A
+ * remote part that names places or time zones wins over the office's city
+ * ("Berlin, Germany | Remote (CET ±2h)" is open to European time zones).
  * Job-seeker posts, replies and posts without a header are skipped (not
  * scanned). Jobs link to the HN comment, with the post's ATS or careers link
  * as Direct URL.
@@ -250,14 +252,32 @@ function workplaceOf(parts, nextLines) {
   return modeOf(nextLines.join(" | "));
 }
 
-/** The header's place parts, the sheet's Location: "Berlin, Germany | REMOTE (EU)". */
+const ZONE_RE = /\b(?:cet|cest|eet|eest|wet|gmt|utc)\b|time\s*zones?|timezones?/i;
+
+/**
+ * The header's place parts: `shown`, the sheet's Location ("Berlin, Germany |
+ * REMOTE"); `office`, the parts that only say where the office is. When a
+ * remote part names places or time zones ("Berlin, Germany | Remote (CET
+ * ±2h)"), it says who may apply and the office doesn't: only it is shown, and
+ * the office parts leave the header line rule 7 reads.
+ */
 function locationOf(parts) {
-  return parts
+  const pieces = parts
     .flatMap(wherePieces)
     .map((p) => p.replace(PAY_TAIL_RE, "").trim())
-    .filter((p) => p && (WORK_MODE_RE.test(p) || placesIn(p).any))
-    .slice(0, 3)
-    .join(" | ");
+    .filter((p) => p && (WORK_MODE_RE.test(p) || placesIn(p).any));
+  const remote = pieces.filter((p) => REMOTE_RE.test(p) && (placesIn(p).any || ZONE_RE.test(p)));
+  if (!remote.length) return { shown: pieces.slice(0, 3), office: [] };
+  return { shown: remote.slice(0, 3), office: pieces.filter((p) => !remote.includes(p)) };
+}
+
+/** The header line without the office parts, the company left as it is. */
+function withoutOffice(line, company, office) {
+  if (!office.length) return line;
+  const at = line.indexOf(company);
+  const start = at >= 0 ? at + company.length : 0;
+  const rest = office.reduce((text, p) => text.replace(p, " "), line.slice(start));
+  return `${line.slice(0, start)}${rest}`.replace(/\s+/g, " ").trim();
 }
 
 function directLink(html) {
@@ -283,6 +303,7 @@ export function toJob(hit, titleQuery = "") {
   // The company's own link or name isn't where the job is ("Remote.com", "Berlin Brands Group")
   const parts = segments.slice(1).filter((s) => !URL_RE.test(s));
   const workplace = workplaceOf(parts, bodyLines.slice(0, 2));
+  const where = locationOf(parts);
   const company = segments[0]
     .replace(/\s*\([^)]*\)\s*/g, " ")
     .replace(/https?:\/\/\S+/g, "")
@@ -292,7 +313,7 @@ export function toJob(hit, titleQuery = "") {
     ...normalizeJob({
       title: titleOf(segments, bodyLines, titleQuery),
       company,
-      location: locationOf(parts) || (workplace === "remote" ? "Remote" : ""),
+      location: where.shown.join(" | ") || (workplace === "remote" ? "Remote" : ""),
       site: "hackernews",
       // "Contract Software Engineer" → "Contract", not the whole part
       listing_type: [...new Set(segments.flatMap((s) => globalThis.jbEmploymentKinds(s)))]
@@ -302,7 +323,7 @@ export function toJob(hit, titleQuery = "") {
       is_remote: workplace === "remote" ? true : workplace ? false : "",
       job_url: `${ITEM_URL}${hit.objectID}`,
       job_url_direct: directLink(html),
-      description: lines.join("\n"),
+      description: [withoutOffice(lines[0] || "", segments[0], where.office), ...lines.slice(1)].join("\n"),
     }),
     _id: String(hit.objectID),
     _where: { workplace, listedIn: null, open: null, emptyOpen: null, utc: null, remoteOnly: false },

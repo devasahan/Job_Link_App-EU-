@@ -386,7 +386,9 @@
   // ---- Time zones (standard offsets: Western 0, Central 1, Eastern European 2) ----
 
   const TZ_ELSE = "usa|us|american|north\\s+american|americas|amer|uk|british|latam|asia|asian|apac|africa|african|middle\\s+east";
-  const PLUS_MINUS = "(?:\\+\\s*/\\s*-|±|plus\\s+or\\s+minus)\\s*(\\d{1,2})";
+  // Hours may follow the offset: "±2h", "+/- 3 hrs", "UTC+1 hours"
+  const HOURS = "(?:\\s*(?:h|hrs?|hours?))?";
+  const PLUS_MINUS = `(?:\\+\\s*/\\s*-|±|plus\\s+or\\s+minus)\\s*(\\d{1,2})${HOURS}`;
   // "CET", "European time zones", "UK / EU timezone", "Western European or American time zone", "CET Zone +/- 2 hours"
   const TZ_NAMED_RE = words(
     `(?:(?:${TZ_ELSE})\\s*(?:and|or|&|/|\\+)\\s*)?(western european|central european|eastern european|european|eu|emea|europe)(?:\\s*(?:and|or|&|/|\\+)\\s*(?:${TZ_ELSE}))?\\s+(?:(?:summer|standard|business|working|work)\\s+)?(?:time[\\s-]*zones?|timezones?|time|hours|zones?|tz)(?:\\s*(?:\\(\\s*)?(?:or\\s+)?${PLUS_MINUS})?`,
@@ -394,7 +396,7 @@
   );
   // "UTC+1", "UTC-3 to UTC+3", "UTC/GMT -3 to -8", "between UTC-1 and UTC+3"
   const TZ_RANGE_RE = words(
-    "(?:utc|gmt)(?:\\s*/\\s*(?:utc|gmt))?\\s*([+-]|±)\\s*(\\d{1,2})(?:[:.][0-5]\\d)?(?:\\s*(?:to|-|and|through|until|till)\\s*(?:(?:utc|gmt)\\s*)?(?:([+-])\\s*)?(\\d{1,2})(?:[:.][0-5]\\d)?)?",
+    `(?:utc|gmt)(?:\\s*/\\s*(?:utc|gmt))?\\s*([+-]|±)\\s*(\\d{1,2})(?:[:.][0-5]\\d)?(?:\\s*(?:to|-|and|through|until|till)\\s*(?:(?:utc|gmt)\\s*)?(?:([+-])\\s*)?(\\d{1,2})(?:[:.][0-5]\\d)?)?${HOURS}`,
     "g"
   );
   // "GMT time zone (or +/- 3 hours", "UTC +/- 3"

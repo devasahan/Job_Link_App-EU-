@@ -94,6 +94,31 @@ test("the work mode comes from the header; a remote word wins, a place without o
   assert.equal(mode("Acme | Backend Engineer | Full-time", "We're a Berlin-based startup."), null);
 });
 
+test("an office plus a remote part that names places or time zones: the remote part says who may apply", () => {
+  const read = (header, opts = {}) => {
+    const job = toJob(post(`${header}<p>We build developer tools in TypeScript and Go.`));
+    const place = globalThis.jbOpenTo(job, job._where, { ticked: ["DE", "SE", "PL"], abroad: [], home: "", ...opts });
+    return { location: job.location, head: job.description.split("\n")[0], to: place.open ? place.to : place.reason };
+  };
+  assert.deepEqual(read("Acme | Senior SWE | Berlin, Germany | Remote (CET ±2h)"), {
+    location: "Remote (CET ±2h)",
+    head: "Acme | Senior SWE | | Remote (CET ±2h)",
+    to: "European time zones",
+  });
+  assert.equal(read("Acme | Senior SWE | Berlin, Germany | Remote (CET ±2h)", { home: "SE" }).to, "European time zones");
+  assert.equal(read("Acme | Senior SWE | London, UK | Remote (GMT ±2h)").to, "European time zones");
+  assert.equal(read("Acme | Senior SWE | Amsterdam, Netherlands | Onsite or Remote (EU time zones)", { ticked: ["DE"] }).to, "European time zones");
+  // The company keeps its name when it shares the office's
+  assert.equal(read("Berlin Labs | Backend Engineer, Berlin | Remote (EU)").head, "Berlin Labs | Backend Engineer, | Remote (EU)");
+  // A plain "REMOTE" says nothing about who: the office's country still does
+  const plain = read("Acme | Senior SWE | Berlin, Germany | REMOTE");
+  assert.equal(plain.location, "Berlin, Germany | REMOTE");
+  assert.equal(plain.to, "Germany");
+  // A remote part that names a country opens only to it
+  assert.equal(read("Acme | Senior SWE | Paris, France | Hybrid or Remote (France)", { ticked: ["DE", "FR"] }).to, "France");
+  assert.equal(read("Acme | Senior SWE | Paris, France | Hybrid or Remote (France)", { ticked: ["DE"] }).to, "notOpen");
+});
+
 test("headers: newer <p>-wrapped HTML, other separators, roles without a role word, multiple roles", () => {
   const wrapped = toJob(post("<p>Acme | Backend Engineer | REMOTE (EU)</p><p>Rust and Go.</p>"));
   assert.equal(wrapped.title, "Backend Engineer");

@@ -256,6 +256,18 @@ test("more ways postings say they hire in Europe", () => {
   assert.equal(check({ description: "We can employ you in Canada, Ireland, Portugal or Spain." }, countryNames("FR")).open, false);
 });
 
+test("a time-zone offset may carry its hours: ±2h, +/- 3 hrs, UTC+1 hours", () => {
+  for (const location of ["Remote (GMT ±2h)", "Remote (GMT±2h)", "Remote (UTC ±2h)", "Remote (UTC ± 2 hours)", "Remote (CET +/- 3 hrs)"]) {
+    const r = check({ location }, EVERY);
+    assert.equal(r.open, true, location);
+    assert.equal(r.to, "European time zones", location);
+  }
+  assert.equal(check({ description: "Remote, UTC+1 hours overlap required." }, countryNames("DE")).open, true);
+  // The window still leaves the far countries out, and an hours word isn't any word
+  assert.equal(check({ location: "Remote (GMT ±1h)" }, countryNames("FI")).open, false);
+  assert.equal(check({ location: "Remote (UTC+2 hiring)" }, countryNames("FI")).open, true);
+});
+
 test("a bullet that runs into the next one still says where candidates live", () => {
   // stripHtml joins list items with a space, as indeed.js reads them
   const cases = [

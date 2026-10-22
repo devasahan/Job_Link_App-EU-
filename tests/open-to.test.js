@@ -22,6 +22,19 @@ test("rule 1: hybrid or on-site is not remote, from the source or the posting", 
   assert.equal(reason({ location: "On-site, Berlin" }, { listedIn: "DE" }), "notRemote");
   assert.equal(reason({ description: "This role is hybrid: 2 days a week in our Berlin office." }, { listedIn: "DE" }), "notRemote");
   assert.equal(reason({ description: "This is not a remote position." }, { listedIn: "DE" }), "notRemote");
+  // A board's own "Remote (…)" label: the description may still say the job is hybrid or on-site…
+  const remoteNl = { open: ["Netherlands"] };
+  const onBoard = (description) => reason({ location: "Remote (Netherlands)", description }, remoteNl, { ticked: ["NL"] });
+  assert.equal(onBoard("This is a hybrid role: three days a week in our Amsterdam office."), "notRemote");
+  assert.equal(onBoard("This role is hybrid, 3 days a week in our Amsterdam office."), "notRemote");
+  assert.equal(onBoard("This position is fully on-site in Amsterdam."), "notRemote");
+  // …but office days, "no remote work from…" or "hybrid or remote" don't overrule it
+  assert.equal(onBoard("Fully remote, with an optional 2 days a week in our Lisbon office."), "open");
+  assert.equal(onBoard("No remote work from outside the Netherlands."), "open");
+  assert.equal(onBoard("This role is hybrid or remote, as you prefer."), "open");
+  // A location that says hybrid or "Remote or Hybrid" settles it either way
+  assert.equal(reason({ location: "Remote or Hybrid (Berlin)", description: "This role is hybrid." }, { listedIn: "DE" }), "open");
+  assert.equal(reason({ location: "Hybrid (Berlin)", description: "Fully remote." }, { listedIn: "DE" }), "notRemote");
   // Company policy and technology are no workplace
   assert.equal(reason({ description: "We offer a hybrid working model." }, { listedIn: "DE" }), "open");
   assert.equal(reason({ title: "Hybrid Cloud Engineer" }, { listedIn: "DE" }), "open");
@@ -41,6 +54,8 @@ test("jbWorkplaceFromText reads tags, either-or and EU words", () => {
   // cheap: title and location only
   assert.equal(w("Dev", { description: "This role is hybrid." }), "hybrid");
   assert.equal(globalThis.jbWorkplaceFromText({ title: "Dev", description: "This role is hybrid." }, { cheap: true }), null);
+  assert.equal(w("Dev", { location: "Remote (Germany)", description: "This role is hybrid." }), "hybrid");
+  assert.equal(globalThis.jbWorkplaceFromText({ title: "Dev", location: "Remote (Germany)", description: "This role is hybrid." }, { cheap: true }), "remote");
 });
 
 test("rule 2: listed where the user lives", () => {
@@ -75,13 +90,32 @@ test("rule 5: the board's who-may-apply list, narrowed by time zones", () => {
     "Europe (UTC+0 to UTC+1)"
   );
   assert.equal(reason({}, { open: ["Finland"], utc: [-1, 1] }, { ticked: ["FI"] }), "restricted");
+  // A window that cuts the region names it, whoever T is; one that cuts nothing doesn't
+  const zoned = { open: [], emptyOpen: "world", utc: [1, 2] };
+  assert.equal(openTo({}, zoned).to, "Europe (UTC+1 to UTC+2)");
+  assert.equal(openTo({}, zoned, { home: "SE" }).to, "Europe (UTC+1 to UTC+2)");
+  assert.equal(openTo({}, zoned, { ticked: ["DE"] }).to, "Europe (UTC+1 to UTC+2)");
+  assert.equal(openTo({}, { open: [], emptyOpen: "world", utc: [-1, 3] }, { home: "SE" }).to, "Worldwide");
+  assert.equal(reason({}, zoned, { home: "PT" }), "restricted");
   // A long list names a few countries, then counts the rest
   const many = ["AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE"];
   assert.equal(openTo({}, { open: many }, { ticked: many }).to, "Austria, Belgium, Bulgaria, Croatia, Cyprus +3");
   // With home set, a posting that says you must live elsewhere
   const mustDe = { description: "You must be based in Germany." };
   assert.equal(reason(mustDe, { open: [], emptyOpen: "world" }, { home: "SE" }), "residentsOnly");
-  assert.equal(reason(mustDe, { open: [], emptyOpen: "world" }), "open");
+  // With home unset it narrows the list, as rule 7 reads the same words
+  assert.deepEqual(openTo(mustDe, { open: [], emptyOpen: "world" }), { open: true, to: "Germany" });
+  assert.deepEqual(openTo(mustDe, { open: [], emptyOpen: "europe" }, { ticked: ["NL", "PL"] }), {
+    open: false,
+    reason: "restricted",
+    why: "must be based in germany",
+    to: "",
+  });
+  assert.equal(openTo(mustDe, { open: ["Germany", "France"] }).to, "Germany");
+  // A region-wide one leaves every European country in
+  assert.equal(openTo({ description: "You must be based in the EU." }, { open: [], emptyOpen: "world" }).to, "Worldwide");
+  // The cheap pass leaves it to the full check
+  assert.equal(openTo(mustDe, { open: [], emptyOpen: "europe" }, { ticked: ["NL"], cheap: true }).open, true);
 });
 
 test("rule 6: listed in a ticked European country (Indeed's rule)", () => {
