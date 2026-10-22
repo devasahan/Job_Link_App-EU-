@@ -224,9 +224,13 @@ test("freelance is skipped for Full time; check mode asks each source for 3 rece
     seen.push({ id, wanted: ctx.wanted, preset: ctx.opts.preset.id, title: ctx.opts.title });
     ctx.accept([1, 2, 3, 4, 5].map((n) => row(id, `${id}${n}`, `Backend Developer ${n}`, `${id} ${n}`)));
   };
-  const sources = [source("board", run("board")), source("gig", run("gig"), { group: "freelance" })];
-  const full = await scrapeJobs({ ...base, sites: ["board", "gig"], sources, jobType: "fulltime" });
-  assert.equal(full.reports[1].status, "skipped");
+  const sources = [
+    source("board", run("board")),
+    source("gig", run("gig"), { group: "freelance" }),
+    source("contracts", run("contracts"), { needsContract: true }),
+  ];
+  const full = await scrapeJobs({ ...base, sites: ["board", "gig", "contracts"], sources, jobType: "fulltime" });
+  assert.deepEqual(full.reports.map((r) => r.status), ["ok", "skipped", "skipped"]);
   assert.equal(full.reports[1].error, "Type is Full time");
   assert.deepEqual(seen.map((s) => s.id), ["board"]);
   seen.length = 0;

@@ -217,8 +217,9 @@ async function run() {
       return;
     }
     if (skipped) log(`Skipped ${skipped} job(s) you already downloaded`);
+    // Not the ones this Type would skip anyway
     const unticked = liveSources()
-      .filter((s) => !sites.includes(s.id))
+      .filter((s) => !sites.includes(s.id) && !(type === "fulltime" && (s.group === "freelance" || s.needsContract)))
       .map((s) => s.label);
     const settings = { count, preset, title, stack, years, abroad, type, unticked };
 

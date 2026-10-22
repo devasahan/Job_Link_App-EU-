@@ -195,7 +195,7 @@ export async function scrapeJobs({
 
   async function one(meta) {
     // Freelance work isn't full time
-    if (meta.group === "freelance" && type === "fulltime") {
+    if ((meta.group === "freelance" || meta.needsContract) && type === "fulltime") {
       const report = { ...newReport(meta), status: "skipped", error: "Type is Full time", errorKind: "skipped" };
       return { report, jobs: [] };
     }

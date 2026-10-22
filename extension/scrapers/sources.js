@@ -21,7 +21,9 @@
  *   robots        "api" (a documented API) or "obey" (robots.txt is checked)
  *   headerRule    id of its rule in rules/headers.json, if it needs one
  *   pending       the adapter isn't merged yet: hidden and never run
- * Optional: needsContract (Type must allow contract work), optionalHosts.
+ * Optional: needsContract (contract work only: skipped while Type is Full time,
+ * as the freelance group is), optionalHosts (hosts granted at run time, not
+ * in host_permissions; from 2.6).
  */
 
 import { INDEED_SITES } from "./indeed.js";
