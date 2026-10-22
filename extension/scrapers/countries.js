@@ -88,6 +88,44 @@ const LOCAL_NAMES = {
   CH: ["Schweiz", "Suisse", "Svizzera"],
 };
 
+// Other names a board may write for a country it lists a job in
+const ALIASES = {
+  GB: ["UK", "Great Britain", "Britain", "England", "Scotland", "Wales", "Northern Ireland"],
+  US: ["USA", "U.S.", "U.S.A.", "United States of America", "America"],
+  CZ: ["Czech"],
+  GR: ["EL"],
+  IE: ["Republic of Ireland"],
+  NL: ["Holland"],
+};
+const foldName = (text) =>
+  String(text || "")
+    .normalize("NFD")
+    .replace(/\p{M}+/gu, "")
+    .toLowerCase()
+    .replace(/^the\s+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+let byName = null;
+
+/**
+ * The ISO code of a country a board names: a code ("de", "UK", "EL") or a name
+ * in English or its own language ("Germany", "Deutschland", "The Netherlands",
+ * "USA"). Only the popup's countries and the employers abroad; "" otherwise.
+ */
+export function countryCode(text) {
+  if (!byName) {
+    byName = new Map();
+    for (const [code, name] of Object.entries(NAMES)) {
+      for (const n of [code, name, ...(LOCAL_NAMES[code] || []), ...(ALIASES[code] || [])]) {
+        byName.set(foldName(n), code);
+        byName.set(foldName(n).replace(/\./g, ""), code);
+      }
+    }
+  }
+  const key = foldName(text);
+  return byName.get(key) || byName.get(key.replace(/\./g, "")) || "";
+}
+
 /** English and local names of a country. */
 export function countryNames(code) {
   const key = String(code || "").toUpperCase();

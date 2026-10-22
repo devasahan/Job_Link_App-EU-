@@ -717,5 +717,75 @@
     return closed(of("weak")[0]?.text || weakClosed[0]?.text);
   }
 
+  const ALL_CODES = COUNTRIES.map(([code]) => code);
+  const NAME_OF = new Map(COUNTRIES.map(([code, name]) => [code, name]));
+  // Two-letter list items that aren't European country codes
+  const CODE_OUTSIDE = { GB: "United Kingdom", UK: "United Kingdom", US: "United States", CA: "Canada" };
+  const WIDE_RANK = { Worldwide: 2 };
+
+  /**
+   * The places a board's location field or "who may apply" list names (for
+   * open-to.js): `codes`, the European countries it covers (all of them for
+   * Europe, the EU, EEA, EMEA or the world); `wide`, the widest region it
+   * names ("Worldwide" over "Europe"); `names`, the countries it names; and
+   * `outside`, places outside Europe ("usa", "india", "California"). A list is
+   * read item by item: an item may be an ISO code ("DE", "gb"), a name in
+   * English or the country's language ("Germany", "Deutschland", "EMEA"), or
+   * a longer text ("Remote - Europe").
+   */
+  function jbReadPlaces(textOrList) {
+    const { re, byName } = places();
+    const codes = new Set();
+    const names = [];
+    const outside = [];
+    const parts = [];
+    let wide = null;
+    const addCountry = (code) => {
+      codes.add(code);
+      if (!names.some((n) => n.code === code)) names.push({ code, name: NAME_OF.get(code) });
+    };
+    const setWide = (label) => {
+      if (!wide || (WIDE_RANK[label] || 1) > (WIDE_RANK[wide] || 1)) wide = label;
+      for (const code of ALL_CODES) codes.add(code);
+    };
+    const items = Array.isArray(textOrList) ? textOrList : [textOrList];
+    for (const raw of items) {
+      const item = typeof raw === "string" ? raw : String(raw?.alpha2 || raw?.code || raw?.name || "");
+      const code = item.trim().toUpperCase();
+      if (/^[A-Z]{2}$/.test(code) && code !== "EU") {
+        const own = code === "EL" ? "GR" : code;
+        if (NAME_OF.has(own)) addCountry(own);
+        else outside.push(CODE_OUTSIDE[code] || code);
+        continue;
+      }
+      for (const m of prep(item).matchAll(re)) {
+        const place = byName.get(m[1]);
+        if (!place) continue;
+        if (place.kind === "country") addCountry(place.code);
+        else if (place.kind === "region") setWide(place.label);
+        else if (place.kind === "world") setWide("Worldwide");
+        else if (place.kind === "part") {
+          parts.push(place.label);
+          for (const c of place.codes) codes.add(c);
+        } else outside.push(m[1]);
+      }
+    }
+    return { codes: ALL_CODES.filter((c) => codes.has(c)), wide, names, parts, outside };
+  }
+
+  /** European countries whose standard UTC offset is within [lo, hi]. */
+  function jbCountriesInUtc(lo, hi) {
+    return [...windowScope([Math.min(lo, hi), Math.max(lo, hi)])];
+  }
+
+  /** A European country's English name and the names postings write for it ("DE" → Germany, Deutschland). */
+  function jbCountryNames(code) {
+    const row = COUNTRIES.find(([c]) => c === String(code || "").toUpperCase());
+    return row ? [row[1], ...row[3]] : [];
+  }
+
   globalThis.jbOpenToEurope = jbOpenToEurope;
+  globalThis.jbReadPlaces = jbReadPlaces;
+  globalThis.jbCountriesInUtc = jbCountriesInUtc;
+  globalThis.jbCountryNames = jbCountryNames;
 })();
