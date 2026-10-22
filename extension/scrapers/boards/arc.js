@@ -130,9 +130,11 @@ const onArc = (url) => {
 
 /**
  * The job's page and its outside apply link: a url field, a path, or a slug
- * under /remote-jobs/j/; with none, the listing page the job was found on.
+ * under /remote-jobs/j/. With none, no link: the listing page it was found
+ * on is every such job's page, and history and the merge would take them
+ * all for one job.
  */
-function linksOf(row, pageUrl) {
+function linksOf(row) {
   const given = [row.url, row.jobUrl, row.link, row.href, row.path, row.applyUrl, row.applicationUrl, row.externalUrl]
     .map(absolute)
     .filter(Boolean);
@@ -141,17 +143,17 @@ function linksOf(row, pageUrl) {
   const page = given.find(onArc) || fromSlug;
   const elsewhere = given.find((u) => !onArc(u)) || "";
   // An external job's only link is its page: no separate direct link
-  return page ? { url: page, direct: elsewhere } : { url: elsewhere || pageUrl, direct: "" };
+  return page ? { url: page, direct: elsewhere } : { url: elsewhere, direct: "" };
 }
 
 /** One row of arcJobs or externalJobs (or a job list found elsewhere) as a job. */
-export function toJob(row, { external = false, pageUrl = `${BASE}${LIST_PATH}` } = {}) {
+export function toJob(row, { external = false } = {}) {
   const countries = list(row.requiredCountries ?? row.countries)
     .map((c) => str(c) || (c && typeof c === "object" ? str(c.code) || str(c.alpha2) || str(c.isoCode) || str(c.name) : ""))
     .filter(Boolean);
   const place = nameOf(row.location) || str(row.locationText) || str(row.locationName);
   const company = nameOf(row.company) || str(row.companyName);
-  const { url, direct } = linksOf(row, pageUrl);
+  const { url, direct } = linksOf(row);
   const categories = [...list(row.categories), ...list(row.primarySkills), ...list(row.skills), ...list(row.tags)].map(nameOf).filter(Boolean);
   const workplace = workplaceOf(row);
   // Codes or names the readers know; a location naming places stands in for an empty list
@@ -171,7 +173,8 @@ export function toJob(row, { external = false, pageUrl = `${BASE}${LIST_PATH}` }
         ? "Remote"
         : "Remote (Worldwide)";
   const years = Number(row.minYearsOfExperience ?? row.yearsOfExperience ?? row.minExperience);
-  const key = str(row.id) || str(row.randomKey) || str(row.uuid) || url;
+  // Rows with no id or link are told apart by title and company
+  const key = str(row.id) || str(row.randomKey) || str(row.uuid) || url || `${str(row.title)}|${company}`;
   return {
     ...normalizeJob({
       title: str(row.title),
@@ -263,7 +266,7 @@ export async function run(ctx) {
       throw new SourceError("blocked", `a challenge page at ${shortUrl(url)}`, { status: res.status, url });
     }
     const { lists, last } = readPage(res.text, page);
-    const jobs = lists.flatMap(({ external, rows }) => rows.map((row) => toJob(row, { external, pageUrl: url })));
+    const jobs = lists.flatMap(({ external, rows }) => rows.map((row) => toJob(row, { external })));
     if (!jobs.length) break;
     // The same jobs again: the site ignores the page number
     const fresh = jobs.filter((j) => !seen.has(j._id));

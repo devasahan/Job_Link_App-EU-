@@ -6,6 +6,8 @@ import { adapterContract, runFixture } from "./helpers/contract.js";
 import { FIXTURES_DIR } from "./helpers/fixture.js";
 import { toJob, toIso, jobArrays, readPage } from "../extension/scrapers/boards/arc.js";
 import { DATE_PRESETS } from "../extension/scrapers/util.js";
+import { jobKeys } from "../extension/scrapers/history.js";
+import { mergeSources } from "../extension/scrapers/index.js";
 
 // The registry entry this adapter ships with (sources.js)
 const META = {
@@ -86,12 +88,26 @@ test("external jobs: their own link, and an empty country list leaves it to the 
   assert.equal(job._id, "ext:e1");
   assert.equal(job.location, "Remote");
   assert.equal(job._where.emptyOpen, null);
-  // A location that names places stands in for the list; no link at all: the page it was on
-  const placed = toJob({ title: "Dev", location: "Europe", requiredCountries: [] }, { external: true, pageUrl: "https://arc.dev/remote-jobs?page=3" });
+  // A location that names places stands in for the list
+  const placed = toJob({ title: "Dev", location: "Europe", requiredCountries: [] }, { external: true });
   assert.deepEqual(placed._where.open, ["Europe"]);
   assert.equal(placed.location, "Remote (Europe)");
-  assert.equal(placed.job_url, "https://arc.dev/remote-jobs?page=3");
   assert.equal(placed.anonymous, true);
+});
+
+test("a row with no url or slug has no link: the listing page would make every such job one", () => {
+  const bare = (title, company) => toJob({ randomKey: title, title, ...(company ? { company: { name: company } } : {}) });
+  const jobs = [bare("Senior Backend Engineer", "Alpha"), bare("Frontend Developer", "Beta")];
+  assert.deepEqual(jobs.map((j) => j.job_url), ["", ""]);
+  assert.equal(jobs[0]._id, "arc:Senior Backend Engineer");
+  assert.equal(toJob({ title: "Go Developer", companyName: "Gamma" })._id, "arc:Go Developer|Gamma");
+  // Downloaded, they don't hide later Arc jobs
+  const later = jobKeys(bare("Go Developer", "Gamma"));
+  assert.ok(!jobs.flatMap(jobKeys).some((k) => later.includes(k)));
+  // Without a company, the merge leaves them apart
+  const anonymous = [bare("Senior Backend Engineer"), bare("Frontend Developer")];
+  assert.ok(anonymous.every((j) => j.anonymous));
+  assert.deepEqual(mergeSources(anonymous), { jobs: anonymous, merged: 0 });
 });
 
 test("You live in: a list that names your country opens the job; 'must be based in' elsewhere is residents only", async () => {
