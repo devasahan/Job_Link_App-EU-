@@ -284,8 +284,18 @@ form {
 }
 
 .source-grid .check {
+  align-items: flex-start;
   padding: 2px 0;
   font-size: 12px;
+}
+
+.source-grid .check input {
+  margin-top: 2px;
+}
+
+.source-name .hint {
+  display: block;
+  line-height: 1.25;
 }
 
 .source-group.off .source-grid {

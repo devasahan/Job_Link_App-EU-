@@ -110,13 +110,17 @@ function renderSources() {
       const item = document.createElement("label");
       item.className = "check";
       item.title = source.url || "";
-      item.append(box, ` ${source.label}`);
+      // The hint on its own line: beside the name it squeezes "EU Remote Jobs" into three
+      const name = document.createElement("span");
+      name.className = "source-name";
+      name.textContent = source.label;
       if (source.hint) {
         const hint = document.createElement("span");
         hint.className = "hint";
-        hint.textContent = `(${source.hint})`;
-        item.append(" ", hint);
+        hint.textContent = source.hint;
+        name.append(hint);
       }
+      item.append(box, name);
       grid.append(item);
     }
     details.append(summary, pick, grid);
