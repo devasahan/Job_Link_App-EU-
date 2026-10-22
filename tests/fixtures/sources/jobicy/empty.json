@@ -1,0 +1,8 @@
+{
+  "apiVersion": "2",
+  "documentationUrl": "https://jobicy.com/jobs-rss-feed",
+  "friendlyNotice": "Usage of the Jobicy Remote Jobs API is allowed, but we kindly ask that you mention Jobicy.com as the source of the job listings and provide a link back to the original job listing URL on Jobicy.com.",
+  "jobCount": 0,
+  "lastUpdate": "{{ago:20m}}",
+  "jobs": []
+}

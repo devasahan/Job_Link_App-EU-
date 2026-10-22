@@ -1,0 +1,40 @@
+{
+  "apiVersion": "2",
+  "documentationUrl": "https://jobicy.com/jobs-rss-feed",
+  "friendlyNotice": "Usage of the Jobicy Remote Jobs API is allowed, but we kindly ask that you mention Jobicy.com as the source of the job listings and provide a link back to the original job listing URL on Jobicy.com.",
+  "jobCount": 2,
+  "lastUpdate": "{{ago:20m}}",
+  "nextCursor": null,
+  "jobs": [
+    {
+      "id": 131008,
+      "url": "https://jobicy.com/jobs/131008-devops-engineer",
+      "jobSlug": "131008-devops-engineer",
+      "jobTitle": "DevOps Engineer",
+      "companyName": "Garonne Cloud SAS",
+      "companyLogo": "",
+      "jobIndustry": ["DevOps & Sysadmin"],
+      "jobType": ["contract"],
+      "jobGeo": "France, Spain",
+      "jobLevel": "Senior",
+      "jobExcerpt": "Run our Kubernetes clusters with GitOps.",
+      "jobDescription": "<p>Run our Kubernetes clusters with GitOps. Six-month contract.</p>",
+      "pubDate": "{{ago:8h}}"
+    },
+    {
+      "id": 131009,
+      "url": "https://jobicy.com/jobs/131009-data-engineer",
+      "jobSlug": "131009-data-engineer",
+      "jobTitle": "Data Engineer",
+      "companyName": "Birch Analytics",
+      "companyLogo": "",
+      "jobIndustry": ["Data Science"],
+      "jobType": ["full-time"],
+      "jobGeo": "Europe",
+      "jobLevel": "Midweight",
+      "jobExcerpt": "Spark and dbt.",
+      "jobDescription": "<p>Spark and dbt.</p>",
+      "pubDate": "{{ago:30h}}"
+    }
+  ]
+}

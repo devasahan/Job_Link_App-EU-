@@ -1,0 +1,55 @@
+{
+  "apiVersion": "2",
+  "documentationUrl": "https://jobicy.com/jobs-rss-feed",
+  "friendlyNotice": "Usage of the Jobicy Remote Jobs API is allowed, but we kindly ask that you mention Jobicy.com as the source of the job listings and provide a link back to the original job listing URL on Jobicy.com.",
+  "jobCount": 3,
+  "lastUpdate": "{{ago:20m}}",
+  "nextCursor": null,
+  "jobs": [
+    {
+      "id": 131001,
+      "url": "https://jobicy.com/jobs/131001-senior-backend-engineer",
+      "jobSlug": "131001-senior-backend-engineer",
+      "jobTitle": "Senior Backend Engineer",
+      "companyName": "Nordlys Software AB",
+      "companyLogo": "",
+      "jobIndustry": ["Programming"],
+      "jobType": ["full-time"],
+      "jobGeo": "Europe",
+      "jobLevel": "Senior",
+      "jobExcerpt": "Build our payments APIs in Go and run them on Kubernetes.",
+      "jobDescription": "<p>Build our payments APIs in Go and run them on Kubernetes.</p>",
+      "pubDate": "{{ago:2h}}"
+    },
+    {
+      "id": 131010,
+      "url": "https://jobicy.com/jobs/131010-site-reliability-engineer",
+      "jobSlug": "131010-site-reliability-engineer",
+      "jobTitle": "Site Reliability Engineer",
+      "companyName": "Kestrel Systems",
+      "companyLogo": "",
+      "jobIndustry": ["DevOps & Sysadmin"],
+      "jobType": ["full-time"],
+      "jobGeo": "EMEA",
+      "jobLevel": "Senior",
+      "jobExcerpt": "Keep our observability stack fast.",
+      "jobDescription": "<p>Keep our observability stack fast: Prometheus, Grafana, Terraform.</p>",
+      "pubDate": "{{ago:2h}}"
+    },
+    {
+      "id": 131011,
+      "url": "https://jobicy.com/jobs/131011-full-stack-engineer",
+      "jobSlug": "131011-full-stack-engineer",
+      "jobTitle": "Full Stack Engineer",
+      "companyName": "Mapleleaf Software",
+      "companyLogo": "",
+      "jobIndustry": ["Programming"],
+      "jobType": ["full-time"],
+      "jobGeo": "Canada, UK",
+      "jobLevel": "Midweight",
+      "jobExcerpt": "Rails and React.",
+      "jobDescription": "<p>Rails and React.</p>",
+      "pubDate": "{{ago:3h}}"
+    }
+  ]
+}

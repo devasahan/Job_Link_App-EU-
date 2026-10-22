@@ -1,0 +1,70 @@
+{
+  "apiVersion": "2",
+  "documentationUrl": "https://jobicy.com/jobs-rss-feed",
+  "friendlyNotice": "Usage of the Jobicy Remote Jobs API is allowed, but we kindly ask that you mention Jobicy.com as the source of the job listings and provide a link back to the original job listing URL on Jobicy.com.",
+  "jobCount": 4,
+  "lastUpdate": "{{ago:20m}}",
+  "nextCursor": null,
+  "jobs": [
+    {
+      "id": 131013,
+      "url": "https://jobicy.com/jobs/131013-backend-developer",
+      "jobSlug": "131013-backend-developer",
+      "jobTitle": "Backend Developer",
+      "companyName": "Globetrot",
+      "companyLogo": "",
+      "jobIndustry": ["Programming"],
+      "jobType": ["full-time"],
+      "jobGeo": "Anywhere",
+      "jobLevel": "Midweight",
+      "jobExcerpt": "Node.js services for our travel app.",
+      "jobDescription": "<p>Node.js services for our travel app.</p>",
+      "pubDate": "{{ago:3h}}"
+    },
+    {
+      "id": 131014,
+      "url": "https://jobicy.com/jobs/131014-senior-mobile-engineer",
+      "jobSlug": "131014-senior-mobile-engineer",
+      "jobTitle": "Senior Mobile Engineer",
+      "companyName": "Parcel Post",
+      "companyLogo": "",
+      "jobIndustry": ["Programming"],
+      "jobType": ["full-time"],
+      "jobGeo": "LATAM",
+      "jobLevel": "Senior",
+      "jobExcerpt": "React Native.",
+      "jobDescription": "<p>React Native.</p>",
+      "pubDate": "{{ago:4h}}"
+    },
+    {
+      "id": 131015,
+      "url": "https://jobicy.com/jobs/131015-product-designer",
+      "jobSlug": "131015-product-designer",
+      "jobTitle": "Product Designer",
+      "companyName": "Globetrot",
+      "companyLogo": "",
+      "jobIndustry": ["Design & Multimedia"],
+      "jobType": ["full-time"],
+      "jobGeo": "Anywhere",
+      "jobLevel": "Midweight",
+      "jobExcerpt": "Figma and user research.",
+      "jobDescription": "<p>Figma and user research.</p>",
+      "pubDate": "{{ago:5h}}"
+    },
+    {
+      "id": 131016,
+      "url": "https://jobicy.com/jobs/131016-frontend-engineer",
+      "jobSlug": "131016-frontend-engineer",
+      "jobTitle": "Frontend Engineer",
+      "companyName": "Pixelhaus",
+      "companyLogo": "",
+      "jobIndustry": ["Programming"],
+      "jobType": ["part-time"],
+      "jobGeo": "Anywhere",
+      "jobLevel": "Junior",
+      "jobExcerpt": "20 hours a week on our React app.",
+      "jobDescription": "<p>20 hours a week on our React app.</p>",
+      "pubDate": "{{ago:6h}}"
+    }
+  ]
+}
