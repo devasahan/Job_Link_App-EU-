@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Page 2: 11 Europe, Netherlands; 12 older than a day, so paging ends here -->
+<rss version="2.0"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:atom="http://www.w3.org/2005/Atom"
+	xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+	xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+	xmlns:job_listing="https://euremotejobs.com"
+>
+<channel>
+	<title>EU Remote Jobs</title>
+	<atom:link href="https://euremotejobs.com/?feed=job_feed&#038;posts_per_page=50" rel="self" type="application/rss+xml" />
+	<link>https://euremotejobs.com</link>
+	<description>Remote jobs in Europe</description>
+	<lastBuildDate>{{ago:1h|rfc822}}</lastBuildDate>
+	<language>en-GB</language>
+	<sy:updatePeriod>hourly</sy:updatePeriod>
+	<sy:updateFrequency>1</sy:updateFrequency>
+	<item>
+		<title>Senior Rust Engineer</title>
+		<link>https://euremotejobs.com/job/senior-rust-engineer-ferrous/</link>
+		<dc:creator><![CDATA[EU Remote Jobs]]></dc:creator>
+		<pubDate>{{ago:12h|rfc822}}</pubDate>
+		<guid isPermaLink="false">https://euremotejobs.com/?post_type=job_listing&#038;p=4091</guid>
+		<description><![CDATA[Rust for embedded.]]></description>
+		<content:encoded><![CDATA[<p>Rust for our embedded platform.</p>]]></content:encoded>
+		<job_listing:location><![CDATA[Europe, Netherlands]]></job_listing:location>
+		<job_listing:job_type><![CDATA[Full Time]]></job_listing:job_type>
+		<job_listing:company><![CDATA[Ferrous BV]]></job_listing:company>
+	</item>
+	<item>
+		<title>Mobile Developer</title>
+		<link>https://euremotejobs.com/job/mobile-developer-swift-lane/</link>
+		<dc:creator><![CDATA[EU Remote Jobs]]></dc:creator>
+		<pubDate>{{ago:40h|rfc822}}</pubDate>
+		<guid isPermaLink="false">https://euremotejobs.com/?post_type=job_listing&#038;p=4090</guid>
+		<description><![CDATA[iOS and Android.]]></description>
+		<content:encoded><![CDATA[<p>Swift and Kotlin.</p>]]></content:encoded>
+		<job_listing:location><![CDATA[EMEA]]></job_listing:location>
+		<job_listing:job_type><![CDATA[Full Time]]></job_listing:job_type>
+		<job_listing:company><![CDATA[Swift Lane]]></job_listing:company>
+	</item>
+</channel>
+</rss>

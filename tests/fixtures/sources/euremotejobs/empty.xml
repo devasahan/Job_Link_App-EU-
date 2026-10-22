@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:atom="http://www.w3.org/2005/Atom"
+	xmlns:job_listing="https://euremotejobs.com"
+>
+<channel>
+	<title>EU Remote Jobs</title>
+	<atom:link href="https://euremotejobs.com/?feed=job_feed" rel="self" type="application/rss+xml" />
+	<link>https://euremotejobs.com</link>
+	<description>Remote jobs in Europe</description>
+	<lastBuildDate>{{ago:1h|rfc822}}</lastBuildDate>
+	<language>en-GB</language>
+</channel>
+</rss>
