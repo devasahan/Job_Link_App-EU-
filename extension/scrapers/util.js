@@ -3,6 +3,7 @@
 import "./title-match.js";
 import "./developer.js";
 import "./eligibility.js";
+import "./residence.js";
 import "./job-filters.js";
 
 export const DATE_PRESETS = {
