@@ -22,7 +22,8 @@
     "declarativeNetRequestWithHostAccess"
   ],
   "host_permissions": [
-    "https://apis.indeed.com/*"
+    "https://apis.indeed.com/*",
+    "https://himalayas.app/*"
   ],
   "declarative_net_request": {
     "rule_resources": [

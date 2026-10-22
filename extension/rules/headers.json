@@ -30,5 +30,37 @@
         "other"
       ]
     }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "User-Agent",
+          "operation": "set",
+          "value": "JobBridgeEU/2.4 (personal job search)"
+        },
+        {
+          "header": "Origin",
+          "operation": "remove"
+        },
+        {
+          "header": "Referer",
+          "operation": "remove"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||himalayas.app/jobs/api",
+      "excludedInitiatorDomains": [
+        "himalayas.app"
+      ],
+      "resourceTypes": [
+        "xmlhttprequest",
+        "other"
+      ]
+    }
   }
 ]

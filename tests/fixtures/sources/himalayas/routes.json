@@ -1,0 +1,8 @@
+{
+  "notes": "Himalayas search API (github.com/Himalayas-App/remote-jobs-api): jobs[] with title, companyName, locationRestrictions (strings or {alpha2, name}), timezoneRestrictions, employmentType, pubDate (seconds), expiryDate, guid, applicationLink, description, categories; totalCount. 25 jobs: page 2 is the last.",
+  "routes": [
+    { "url": "https://himalayas.app/jobs/api/search", "query": { "page": "1" }, "file": "page1.json" },
+    { "url": "https://himalayas.app/jobs/api/search", "query": { "page": "2" }, "file": "page2.json" },
+    { "url": "https://himalayas.app/jobs/api/search", "file": "empty.json" }
+  ]
+}
