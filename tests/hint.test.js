@@ -23,3 +23,11 @@ test("the hint names only settings that would widen the run", () => {
   );
   assert.equal(moreResultsHint({ ...base, preset: DATE_PRESETS.month }), "");
 });
+
+test("the hint names the sources the run didn't search", () => {
+  assert.equal(
+    moreResultsHint({ ...base, unticked: ["Jobicy", "Arc.dev"] }),
+    "Fewer than 50 found. For more, try a longer Posted window (3 days, 7 days or 30 days), ticking more Platforms (Jobicy, Arc.dev)."
+  );
+  assert.equal(moreResultsHint({ ...base, preset: DATE_PRESETS.month, unticked: ["Hacker News"] }), "Fewer than 50 found. For more, try ticking more Platforms (Hacker News).");
+});

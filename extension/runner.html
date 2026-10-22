@@ -8,7 +8,7 @@
     <style>
       body {
         width: auto;
-        max-width: 520px;
+        max-width: 620px;
         margin: 0 auto;
         padding: 28px 20px;
       }
@@ -24,6 +24,69 @@
         max-height: 360px;
         overflow: auto;
       }
+      .live {
+        margin: 6px 0 0;
+      }
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 12px;
+      }
+      .actions .ok {
+        margin: 0;
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+      .actions .link {
+        font-size: 12px;
+      }
+      .results {
+        margin-top: 16px;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--card);
+      }
+      .results h2 {
+        margin: 0 0 8px;
+        font-size: 13px;
+        font-weight: 650;
+      }
+      .results ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      /* A dot per source: green ok, amber stopped early, red failed, grey skipped */
+      .results li {
+        position: relative;
+        padding: 3px 0 3px 16px;
+      }
+      .results li::before {
+        content: "";
+        position: absolute;
+        left: 2px;
+        top: 9px;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--ok);
+      }
+      .results li.incomplete::before {
+        background: #b45309;
+      }
+      .results li.failed::before {
+        background: var(--danger);
+      }
+      .results li.skipped::before {
+        background: var(--line);
+      }
+      .results .hint {
+        margin: 8px 0 0;
+      }
     </style>
   </head>
   <body>
@@ -35,6 +98,17 @@
       </div>
     </header>
     <p id="status" class="status" role="status">Starting…</p>
+    <p id="live" class="live hint" aria-live="polite" hidden></p>
+    <div class="actions">
+      <button type="button" id="stop-btn" class="ok" hidden>Stop and download</button>
+      <button type="button" id="copy-btn" class="link" hidden>Copy report</button>
+      <span id="copy-note" class="hint" hidden></span>
+    </div>
+    <section id="results" class="results" hidden>
+      <h2>Results by source</h2>
+      <ul id="source-list"></ul>
+      <p id="merge-line" class="hint" hidden></p>
+    </section>
     <pre id="log" class="log" hidden></pre>
     <script src="lib/xlsx.mini.min.js"></script>
     <script type="module" src="runner.js"></script>

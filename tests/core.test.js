@@ -232,3 +232,21 @@ test("robots.txt: our group or *, the longest rule wins, * and $ wildcards", () 
   assert.equal(pathMatches("/a*b*c$", "/axxbyyc"), true);
   assert.equal(pathMatches("/a*b*c$", "/axxbyycd"), false);
 });
+
+test("Copy report: lines, log, and samples only for sources that failed or kept nothing", async () => {
+  const { reportText } = await import("../extension/scrapers/core/diagnostics.js");
+  const sample = (body) => ({ method: "GET", url: "https://a.test/api?page=1", status: 403, headers: { "content-type": "text/html" }, body });
+  const ok = { ...newReport({ id: "ok", label: "Fine" }), status: "ok", scanned: 3, kept: 2, samples: [sample("FINE BODY")] };
+  const bad = { ...newReport({ id: "bad", label: "Broken" }), status: "failed", error: "HTTP 403 (blocked) at a.test/api", samples: [sample("<html>blocked</html>")] };
+  const zero = { ...newReport({ id: "zero", label: "Empty" }), status: "ok", scanned: 4, kept: 0, samples: [sample("{\"jobs\":[]}")] };
+  const text = reportText({ version: "2.4.0", at: new Date("2026-10-22T10:00:00Z"), log: "Fetching Fine…", reports: [ok, bad, zero], merged: 1, skipped: 2 });
+  assert.match(text, /^JobBridge EU 2\.4\.0 · run · 2026-10-22 10:00 UTC/);
+  assert.match(text, /- Broken failed: HTTP 403/);
+  assert.match(text, /1 duplicates merged, 2 already downloaded/);
+  assert.match(text, /== Broken ==\nGET https:\/\/a\.test\/api\?page=1 → HTTP 403\ncontent-type: text\/html\n<html>blocked<\/html>/);
+  assert.match(text, /== Empty ==/);
+  assert.ok(!text.includes("FINE BODY"));
+  const check = reportText({ mode: "check", reports: [ok] });
+  assert.match(check, /source check/);
+  assert.match(check, /- Fine: OK · 3 scanned → 2 kept/);
+});

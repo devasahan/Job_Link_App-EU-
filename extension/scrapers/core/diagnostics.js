@@ -120,3 +120,33 @@ export function checkLine(report) {
 
 /** Did the source fail or keep nothing? Its response samples go into Copy report. */
 export const needsSamples = (report) => report.status === "failed" || (report.status !== "skipped" && !report.kept);
+
+/**
+ * Copy report: the run log, each source's line, and the response samples of
+ * the sources that failed or kept nothing (status, a few headers, the first
+ * 2 KB), so a live failure can be fixed from what the site really sent. Samples
+ * never hold cookies (http.js keeps a short header list).
+ */
+export function reportText({ version = "", mode = "run", at = new Date(), log = "", reports = [], merged = 0, skipped = 0 }) {
+  const check = mode === "check";
+  const lines = [
+    `JobBridge EU ${version} · ${check ? "source check" : "run"} · ${at.toISOString().slice(0, 16).replace("T", " ")} UTC`,
+    "",
+    "Results by source",
+    ...reports.map((r) => `- ${check ? checkLine(r) : sourceLine(r)}`),
+  ];
+  if (!check) lines.push(`${merged} duplicates merged, ${skipped} already downloaded`);
+  lines.push("", "Log", log.trim());
+  const sampled = reports.filter((r) => needsSamples(r) && r.samples?.length);
+  if (sampled.length) {
+    lines.push("", "Response samples (sources that failed or kept nothing)");
+    for (const r of sampled) {
+      lines.push("", `== ${r.label} ==`);
+      for (const s of r.samples) {
+        const headers = Object.entries(s.headers || {}).map(([k, v]) => `${k}: ${v}`);
+        lines.push(`${s.method} ${s.url} → HTTP ${s.status}`, ...headers, s.body, "");
+      }
+    }
+  }
+  return lines.join("\n").trim() + "\n";
+}
