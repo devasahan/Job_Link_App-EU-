@@ -1,0 +1,9 @@
+{
+  "notes": "Arc.dev listing pages (Next.js): __NEXT_DATA__ props.pageProps.arcJobs and externalJobs, with title, company { name }, requiredCountries (ISO codes, empty = anywhere), postedAt (epoch seconds), jobType, categories, slug or url, as open-source parsers describe them (unverified live). Page 1 has no page parameter; page 3 is empty, which ends the paging.",
+  "routes": [
+    { "url": "https://arc.dev/robots.txt", "contentType": "text/plain", "file": "robots.txt" },
+    { "url": "https://arc.dev/remote-jobs", "query": { "page": null }, "file": "page1.html" },
+    { "url": "https://arc.dev/remote-jobs", "query": { "page": "2" }, "file": "page2.html" },
+    { "url": "https://arc.dev/remote-jobs", "file": "empty.html" }
+  ]
+}
