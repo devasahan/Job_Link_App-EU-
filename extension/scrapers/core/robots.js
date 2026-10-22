@@ -5,14 +5,16 @@
  * Allow on a tie; "*" matches any run of characters and "$" ends the path, as
  * Google and RFC 9309 read them. Crawl-delay feeds the host's gap (http.js caps
  * it at 10 s). A missing robots.txt (4xx) allows everything; an unreachable
- * one too, since the request itself will say what is wrong. Each host's
- * rules are cached for a day.
+ * one (5xx, no answer) too, since the request itself will say what is wrong.
+ * A real answer (2xx, 4xx) is cached for a day, an unreachable one for 10
+ * minutes: one bad moment mustn't switch the rules off until tomorrow.
  */
 
 import { createCache } from "./cache.js";
 
 const AGENT = "jobbridge";
 const TTL_MS = 24 * 3600e3;
+const FAILED_TTL_MS = 10 * 60e3;
 const MAX_BYTES = 500 * 1024;
 
 /** Parse robots.txt into { rules: [{ allow, path }], delayMs } for our agent. */
@@ -112,9 +114,11 @@ export function createRobots({ fetchText, cache, now = Date.now }) {
       const hit = await store.get(origin);
       if (hit) return hit;
       let parsed = { rules: [], delayMs: 0 };
+      let answered = false;
       try {
         const { status, text } = await fetchText(`${origin}/robots.txt`, signal);
         if (status >= 200 && status < 300) parsed = parseRobots(text);
+        answered = status < 500;
       } catch (err) {
         // Stopped: let the caller see it; unreachable: allow, the request will say why
         if (signal?.aborted) {
@@ -122,7 +126,7 @@ export function createRobots({ fetchText, cache, now = Date.now }) {
           throw err;
         }
       }
-      await store.set(origin, parsed, TTL_MS);
+      await store.set(origin, parsed, answered ? TTL_MS : FAILED_TTL_MS);
       return parsed;
     })();
     pending.set(origin, load);

@@ -159,8 +159,8 @@ function retryAfterSeconds(value, now) {
  *     when larger, 1 s by default; different hosts run in parallel, up to 6
  *     requests in all;
  *   - one retry on a 5xx (not 503) or a network error; a 429 waits out
- *     Retry-After once when it is 30 s or less; 403, 503 and a 429 that
- *     doesn't clear count as blocked;
+ *     Retry-After once when it is 30 s or less, and so does every request
+ *     to that host; 403, 503 and a 429 that doesn't clear count as blocked;
  *   - a 2 KB sample of each URL path's answer is kept for the run report.
  * `scale` shortens every wait (tests); `fetch` replaces the network (tests).
  * client(meta, { signal }) gives one source its view: its gaps, its robots
@@ -180,14 +180,35 @@ export function createHttp({
   const waiting = [];
 
   const hostState = (host) => {
-    if (!hosts.has(host)) hosts.set(host, { tail: Promise.resolve(), lastEnd: 0 });
+    if (!hosts.has(host)) hosts.set(host, { tail: Promise.resolve(), lastEnd: 0, pauseUntil: 0 });
     return hosts.get(host);
   };
 
+  /**
+   * One of the requests in flight. A stopped request leaves the queue at once,
+   * and one woken after its stop hands the wake-up on: else the request
+   * behind it would wait for a slot that is already free.
+   */
   async function slot(signal) {
     while (inFlight >= maxInFlight) {
-      await new Promise((resolve) => waiting.push(resolve));
       if (signal?.aborted) throw abortedError(signal);
+      await new Promise((resolve, reject) => {
+        const wake = () => {
+          signal?.removeEventListener("abort", stop);
+          resolve();
+        };
+        const stop = () => {
+          const at = waiting.indexOf(wake);
+          if (at >= 0) waiting.splice(at, 1);
+          reject(abortedError(signal));
+        };
+        waiting.push(wake);
+        signal?.addEventListener("abort", stop, { once: true });
+      });
+      if (signal?.aborted) {
+        waiting.shift()?.();
+        throw abortedError(signal);
+      }
     }
     inFlight += 1;
   }
@@ -196,12 +217,12 @@ export function createHttp({
     waiting.shift()?.();
   }
 
-  /** Runs `task` when the host is free and its gap has passed. */
+  /** Runs `task` when the host is free, its gap has passed and no Retry-After pause holds it. */
   function onHost(host, gapMs, signal, task) {
     const state = hostState(host);
     const run = state.tail.then(async () => {
       if (signal?.aborted) throw abortedError(signal);
-      const wait = state.lastEnd ? state.lastEnd + gapMs * scale - now() : 0;
+      const wait = Math.max(state.lastEnd ? state.lastEnd + gapMs * scale : 0, state.pauseUntil) - now();
       await sleepFor(wait, signal);
       await slot(signal);
       try {
@@ -295,7 +316,17 @@ export function createHttp({
       const attempt = () =>
         onHost(u.host, gap, signal, async () => {
           requests += 1;
-          return once(url, init, signal);
+          const out = await once(url, init, signal);
+          // A short Retry-After pauses the whole host, set before the next request in its queue starts
+          if (out.res.status === 429) {
+            const wait = retryAfterSeconds(out.res.headers?.get?.("retry-after"), now);
+            if (wait != null && wait <= RETRY_AFTER_MAX_S) {
+              const state = hostState(u.host);
+              state.pauseUntil = Math.max(state.pauseUntil, now() + wait * 1000 * scale);
+              out.paused = true;
+            }
+          }
+          return out;
         });
 
       // One retry in all: a network error, a timeout or a server error (503 is a block)
@@ -308,19 +339,16 @@ export function createHttp({
         retried = true;
         out = await attempt();
       }
-      let { res, text } = out;
-      if (!retried && res.status >= 500 && res.status !== 503 && !allow.includes(res.status)) {
-        sample(url, method, res, text);
-        ({ res, text } = await attempt());
+      if (!retried && out.res.status >= 500 && out.res.status !== 503 && !allow.includes(out.res.status)) {
+        sample(url, method, out.res, out.text);
+        out = await attempt();
       }
-      if (res.status === 429) {
-        const wait = retryAfterSeconds(res.headers?.get?.("retry-after"), now);
-        if (wait != null && wait <= RETRY_AFTER_MAX_S) {
-          sample(url, method, res, text);
-          await sleepFor(wait * 1000 * scale, signal);
-          ({ res, text } = await attempt());
-        }
+      // Once, after the host's pause (set above), which holds every other request to that host too
+      if (out.paused) {
+        sample(url, method, out.res, out.text);
+        out = await attempt();
       }
+      const { res, text } = out;
       sample(url, method, res, text);
       if (allow.includes(res.status) || res.ok) {
         return { status: res.status, ok: res.ok, url, headers: res.headers, text };

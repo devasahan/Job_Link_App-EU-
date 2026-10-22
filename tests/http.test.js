@@ -71,6 +71,25 @@ test("at most 6 requests in flight in all", async () => {
   assert.equal(peak, 6);
 });
 
+test("a stopped request waiting for a slot leaves the queue at once; the one behind it still gets the slot", async () => {
+  const { fetch, calls } = fakeFetch((url) => ({ body: {}, delay: url.includes("a.test") ? 80 : 5 }));
+  // One slot stands in for six busy hosts
+  const http = createHttp({ fetch, maxInFlight: 1, cache: memCache() });
+  const stopB = new AbortController();
+  const a = http.client(meta()).json("https://a.test/1");
+  await wait(10);
+  const b = http.client(meta(), { signal: stopB.signal }).json("https://b.test/1");
+  const c = http.client(meta()).json("https://c.test/1");
+  await wait(10);
+  const t0 = Date.now();
+  stopB.abort(new SourceError("aborted", "stopped by you"));
+  await assert.rejects(b, (err) => err.kind === "aborted" && err.message === "stopped by you");
+  assert.ok(Date.now() - t0 < 40, "not when A's slot frees");
+  await a;
+  await c;
+  assert.deepEqual(calls.map((x) => x.host), ["a.test", "c.test"]);
+});
+
 test("a server error or a network error is retried once", async () => {
   const flaky = fakeFetch((url, n) => (n === 1 ? { status: 500, body: "oops" } : { body: { jobs: [1] } }));
   assert.deepEqual(await createHttp({ fetch: flaky.fetch, scale: 0.01, cache: memCache() }).client(meta()).json("https://x.test/a"), {
@@ -112,6 +131,25 @@ test("403 and 503 are blocked at once; a 429 waits out a short Retry-After once"
   const twice = fakeFetch(() => ({ status: 429, headers: { "retry-after": "1" } }));
   await assert.rejects(createHttp({ fetch: twice.fetch, scale: 0.01, cache: memCache() }).client(meta()).json("https://x.test/p"), /429/);
   assert.equal(twice.calls.length, 2);
+});
+
+test("a 429's Retry-After pauses its whole host, not only the request that got it", async () => {
+  const { fetch, calls } = fakeFetch((url, n) =>
+    url.endsWith("x.test/1") && n === 1 ? { status: 429, headers: { "retry-after": "3" } } : { body: {} }
+  );
+  // 3 s × 0.02 = a 60 ms pause
+  const client = createHttp({ fetch, scale: 0.02, cache: memCache() }).client(meta({ gaps: { "x.test": 10 } }));
+  await Promise.all([
+    client.json("https://x.test/1"),
+    client.json("https://x.test/2"),
+    client.json("https://x.test/3"),
+    client.json("https://y.test/1"),
+  ]);
+  const x = calls.filter((c) => c.host === "x.test");
+  assert.deepEqual(x.map((c) => new URL(c.url).pathname), ["/1", "/2", "/3", "/1"]);
+  for (const c of x.slice(1)) assert.ok(c.start - x[0].end >= 55, `${c.url} ${c.start - x[0].end} ms after the 429`);
+  // Other hosts go on
+  assert.ok(calls.find((c) => c.host === "y.test").start - x[0].start < 30);
 });
 
 test("an answer that isn't JSON says what it was; a challenge page is blocked", async () => {
@@ -190,6 +228,44 @@ test('"obey" sources check robots.txt (once per host) and take its Crawl-delay',
   const api = fakeFetch(() => ({ body: {} }));
   await createHttp({ fetch: api.fetch, cache: memCache() }).client(meta()).json("https://y.test/private");
   assert.equal(api.calls.length, 1);
+});
+
+test("robots.txt that can't be read allows for 10 minutes only; a real answer (2xx, 4xx) is kept a day", async () => {
+  let clock = Date.now();
+  const storage = memoryStorage();
+  let robots = { status: 503, body: "" };
+  const { fetch } = fakeFetch((url) => {
+    if (!url.endsWith("/robots.txt")) return { body: "<html>jobs</html>" };
+    if (robots === "offline") throw new TypeError("Failed to fetch");
+    return robots;
+  });
+  const run = () =>
+    createHttp({ fetch, cache: createCache({ storage, now: () => clock }) })
+      .client(meta({ robots: "obey", gaps: { "x.test": 10 } }))
+      .text("https://x.test/jobs");
+  const disallowed = (err) => err.kind === "robots";
+  await run();
+  robots = { body: "User-agent: *\nDisallow: /\n" };
+  clock += 5 * 60e3;
+  await run();
+  clock += 6 * 60e3;
+  await assert.rejects(run(), disallowed);
+  // No answer at all: the same 10 minutes
+  clock += 25 * 3600e3;
+  robots = "offline";
+  await run();
+  robots = { body: "User-agent: *\nDisallow: /\n" };
+  clock += 11 * 60e3;
+  await assert.rejects(run(), disallowed);
+  // A real answer stays a day; a 404 is one too
+  robots = { status: 404, body: "Not found" };
+  clock += 23 * 3600e3;
+  await assert.rejects(run(), disallowed);
+  clock += 2 * 3600e3;
+  await run();
+  robots = { body: "User-agent: *\nDisallow: /\n" };
+  clock += 23 * 3600e3;
+  await run();
 });
 
 test("expectArray names the keys that came back", () => {
