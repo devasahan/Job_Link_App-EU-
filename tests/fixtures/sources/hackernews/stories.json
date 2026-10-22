@@ -1,0 +1,42 @@
+{
+  "hits": [
+    {
+      "created_at": "{{ago:21d}}",
+      "title": "Ask HN: Who wants to be hired? (October 2026)",
+      "created_at_i": "{{ago:21d|unix}}",
+      "objectID": "45500002"
+    },
+    {
+      "created_at": "{{ago:21d}}",
+      "title": "Ask HN: Freelancer? Seeking freelancer? (October 2026)",
+      "created_at_i": "{{ago:21d|unix}}",
+      "objectID": "45500001"
+    },
+    {
+      "created_at": "{{ago:21d}}",
+      "title": "Ask HN: Who is hiring? (October 2026)",
+      "created_at_i": "{{ago:21d|unix}}",
+      "objectID": "45500000"
+    },
+    {
+      "created_at": "{{ago:51d}}",
+      "title": "Ask HN: Who wants to be hired? (September 2026)",
+      "created_at_i": "{{ago:51d|unix}}",
+      "objectID": "45100002"
+    },
+    {
+      "created_at": "{{ago:51d}}",
+      "title": "Ask HN: Who is hiring? (September 2026)",
+      "created_at_i": "{{ago:51d|unix}}",
+      "objectID": "45100000"
+    }
+  ],
+  "nbHits": 545,
+  "page": 0,
+  "nbPages": 55,
+  "hitsPerPage": 10,
+  "exhaustiveNbHits": true,
+  "query": "",
+  "params": "tags=story%2Cauthor_whoishiring&hitsPerPage=10",
+  "processingTimeMS": 1
+}
