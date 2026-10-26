@@ -21,7 +21,8 @@
  * the main host says 404; a board neither knows (a stale token) is noted,
  * not a failure (common.js runCompanies). Where a job is: its location name
  * ("Remote - EMEA", "Spain (Remote)", "Berlin, Germany; Remote, Spain"),
- * read by atsWhere, and a workplace custom field when the board has one.
+ * read by atsWhere, a workplace custom field when the board has one, and the
+ * office a location names ("Remote - Berlin").
  */
 
 import { normalizeJob, stripHtml } from "../util.js";
@@ -54,6 +55,9 @@ function fieldValue(row, nameRe) {
 function workplaceField(row) {
   const field = fieldValue(row, WORKPLACE_FIELD_RE);
   if (!field) return null;
+  // Read as open-to.js reads a location: "Remote or Hybrid" can be done remotely, "Not Remote" can't
+  const said = globalThis.jbWorkplaceFromText({ location: field.value }, { cheap: true });
+  if (said) return said;
   const v = field.value.toLowerCase();
   if (/hybrid/.test(v)) return "hybrid";
   if (/remote/.test(v) || (/^(?:yes|true)$/.test(v) && /remote/i.test(field.name))) return "remote";
@@ -69,11 +73,16 @@ const toIso = (value) => {
 /** One list row, or a posting from /jobs/{id} (with its content), as a job. */
 export function toJob(row, company, host = MAIN) {
   const location = String(row.location?.name || "").replace(/\s+/g, " ").trim();
-  const where = atsWhere({ locations: [location], workplace: workplaceField(row) });
+  const title = String(row.title || "").trim();
+  const description = row.content ? stripHtml(decodeEntities(row.content)) : "";
+  // The office the location names places a remote job ("Remote - Berlin": Berlin, Germany); not the head office
+  const named = location.toLowerCase();
+  const office = (Array.isArray(row.offices) ? row.offices : []).find((o) => o?.name && o.location && named.includes(String(o.name).toLowerCase()));
+  const where = atsWhere({ locations: [location], workplace: workplaceField(row), country: office ? String(office.location) : "", title, description });
   const link = /^https:\/\//i.test(String(row.absolute_url || "")) ? row.absolute_url : `https://${PAGES[host]}/${encodeURIComponent(company.token)}/jobs/${row.id}`;
   return {
     ...normalizeJob({
-      title: String(row.title || "").trim(),
+      title,
       company: company.name,
       location,
       site: "greenhouse",
@@ -82,7 +91,7 @@ export function toJob(row, company, host = MAIN) {
       date_posted: toIso(row.first_published) || toIso(row.updated_at),
       is_remote: where.workplace === "remote" ? true : where.workplace ? false : "",
       job_url: link,
-      description: row.content ? stripHtml(decodeEntities(row.content)) : "",
+      description,
     }),
     _id: `${company.token}:${row.id}`,
     _where: where,

@@ -240,3 +240,29 @@ test("stopped partway: the company being read says so, and the companies not rea
   assert.match(text, /\n- Grafana Labs \(grafanalabs\): 10 jobs listed, 10 scanned → 4 kept\n/);
   assert.ok(report.notes.includes("Greenhouse: 1 of 3 companies not checked (stopped first): Mozilla (mozilla)"), report.notes.join("\n"));
 });
+
+test("where a job is: the workplace field read like a location, the office a location names, the posting's own words", () => {
+  const job = (location, extra = {}) => toJob({ id: 1, title: "Backend Engineer", location: { name: location }, ...extra }, company("grafanalabs"));
+  const field = (value, name = "Workplace Type") => ({ metadata: [{ id: 1, name, value, value_type: Array.isArray(value) ? "multi_select" : "single_select" }] });
+  // Either way, it can be done remotely; "Not Remote" can't; "Yes" under a Remote field, "Office" as before
+  assert.equal(job("Berlin, Germany", field("Remote or Hybrid"))._where.workplace, "remote");
+  assert.equal(job("Berlin, Germany", field(["Hybrid", "Remote"]))._where.workplace, "remote");
+  assert.equal(job("Berlin, Germany", field("Remote or Hybrid"))._where.listedIn, "DE");
+  assert.equal(job("Remote - EMEA", field("Hybrid or Remote", "Remote Status"))._where.workplace, "remote");
+  assert.equal(job("Remote - EMEA", field("Not Remote"))._where.workplace, "onsite");
+  assert.equal(job("Remote - EMEA", field("Hybrid"))._where.workplace, "hybrid");
+  assert.equal(job("Berlin, Germany", field("Yes", "Remote Eligible"))._where.workplace, "remote");
+  assert.equal(job("Remote - EMEA", field("Office"))._where.workplace, "onsite");
+  // "Remote - Berlin": the Berlin office's country; a head office the location doesn't name places nothing
+  const berlin = { name: "Berlin", location: "Berlin, Germany" };
+  assert.equal(job("Remote - Berlin", { offices: [berlin] })._where.listedIn, "DE");
+  assert.equal(job("Remote", { offices: [{ name: "Berlin HQ", location: "Berlin, Germany" }] })._where.listedIn, null);
+  assert.equal(job("Remote - Berlin")._where.listedIn, null);
+  // Only the location says remote: the posting may say the job is hybrid or on-site; a field is trusted
+  const content = (text) => ({ content: `&lt;p&gt;${text}&lt;/p&gt;` });
+  assert.equal(job("Remote - Germany", content("This role is hybrid, with two days a week in our Berlin office."))._where.workplace, "hybrid");
+  assert.equal(job("Remote - EMEA", content("The position is fully on-site in Amsterdam."))._where.workplace, "onsite");
+  assert.equal(job("Spain (Remote)", content("Please note this is not a remote position."))._where.workplace, "onsite");
+  assert.equal(job("Remote - EMEA", content("Optional: two days a week in our Amsterdam office."))._where.workplace, "remote");
+  assert.equal(job("Remote - EMEA", { ...content("This role is hybrid."), ...field("Remote") })._where.workplace, "remote");
+});

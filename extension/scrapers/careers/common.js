@@ -10,7 +10,8 @@ import { SourceError, parseJson } from "../http.js";
 
 // Not one of open-to.js's remote words, but how boards write it: "Home based - EMEA" (Canonical)
 const HOME_BASED_RE = /(?<![\p{L}\p{N}])home[\s-]?based(?![\p{L}\p{N}])/iu;
-// "Anywhere", "Remote - Anywhere", "Anywhere in the world": the world (read as "Worldwide")
+// "Anywhere", "Remote - Anywhere", "Anywhere in the world": the world (read as "Worldwide"),
+// unless the location names a place ("Anywhere in the US", "Anywhere in EMEA")
 const ANYWHERE_RE = /(?<![\p{L}\p{N}])anywhere(?:\s+in\s+the\s+world)?(?![\p{L}\p{N}])/giu;
 // One location field may hold several: "Berlin, Germany; Remote, Spain", "London | Remote (UK)"
 const SPLIT_RE = /\s*[;|\n]\s*/;
@@ -31,6 +32,12 @@ const regionOnly = (text) => {
   const read = readPlaces([text]);
   return Boolean(read.wide || read.parts.length) && !read.names.length && !read.outside.length;
 };
+
+/** "Anywhere" as "Worldwide", unless the location names a place: "Remote - Anywhere in the US" is the US. */
+function anywhere(text) {
+  const rest = text.replace(ANYWHERE_RE, " ");
+  return rest === text || namesPlace(rest) ? text : text.replace(ANYWHERE_RE, "Worldwide");
+}
 
 /** The one country the places name ("Remote - Spain", "Remote, US"), or "" for none or several. */
 function singleCountry(read) {
@@ -56,19 +63,23 @@ function singleCountry(read) {
  *   - places and no remote word ("Berlin, Germany"): on-site, unless they are
  *     regions only ("EMEA"), which no office is: then open to them, and the
  *     posting may still say the job is hybrid;
- *   - the ATS's workplace field wins over the words. A remote job whose
- *     locations name no place is placed by its address country when that is
- *     European; one outside Europe is often the head office's, so the text decides.
+ *   - the ATS's workplace field wins over the words. When only the words
+ *     say remote, the title and the posting may still say the job is hybrid
+ *     or on-site, as under a "Remote (Germany)" label (open-to.js). A remote
+ *     job whose locations name no place is placed by its address country (or
+ *     the office its location names) when that is European; one outside
+ *     Europe is often the head office's, so the text decides.
  * Several locations: the places of those that say remote, or of all of them
  * when the workplace field does.
- * @param {{ locations?: string[], workplace?: "remote"|"hybrid"|"onsite"|null, country?: string }} info
+ * @param {{ locations?: string[], workplace?: "remote"|"hybrid"|"onsite"|null, country?: string,
+ *           title?: string, description?: string }} info
  */
-export function atsWhere({ locations = [], workplace = null, country = "" } = {}) {
+export function atsWhere({ locations = [], workplace = null, country = "", title = "", description = "" } = {}) {
   const items = [
     ...new Set(
       locations
         .flatMap((l) => String(l || "").split(SPLIT_RE))
-        .map((t) => t.trim().replace(ANYWHERE_RE, "Worldwide"))
+        .map((t) => anywhere(t.trim()))
         .filter(Boolean)
     ),
   ];
@@ -78,6 +89,8 @@ export function atsWhere({ locations = [], workplace = null, country = "" } = {}
   if (!place && remote.length) place = "remote";
   else if (!place && said.includes("hybrid")) place = "hybrid";
   else if (!place && (said.includes("onsite") || (items.length && !items.every(regionOnly)))) place = "onsite";
+  // Only the words said remote: "this role is hybrid" or "not a remote position" in the posting still counts
+  if (!workplace && place === "remote") place = globalThis.jbWorkplaceFromText({ title, location: "Remote", description }) || place;
 
   let placed = remote.filter(namesPlace);
   // The workplace field says remote, or the locations are regions only: all their places count

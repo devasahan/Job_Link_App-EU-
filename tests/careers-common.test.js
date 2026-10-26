@@ -7,6 +7,13 @@ import { atsWhere } from "../extension/scrapers/careers/common.js";
 const where = (location, extra = {}) => atsWhere({ locations: [location], ...extra });
 const pick = (w) => [w.workplace, w.listedIn, w.open];
 
+/** jbOpenTo on a job at that location (a posting that says nothing about where you live). */
+function verdict(location, opts, { description = "Build our APIs in Go.", ...extra } = {}) {
+  const job = { title: "Backend Engineer", company: "Acme", location, description };
+  return globalThis.jbOpenTo(job, atsWhere({ locations: [location], title: job.title, description, ...extra }), { ticked: [...EU_CODES], abroad: ["GB", "CA", "US"], ...opts });
+}
+const outcome = (v) => (v.open ? `open: ${v.to}` : v.reason);
+
 test("atsWhere: a remote word with places opens the job to them; one European country is where it is listed", () => {
   assert.deepEqual(pick(where("Remote - EMEA")), ["remote", null, ["Remote - EMEA"]]);
   assert.deepEqual(pick(where("Remote (Europe)")), ["remote", null, ["Remote (Europe)"]]);
@@ -35,6 +42,36 @@ test("atsWhere: plain Remote is for the posting's text; places without a remote 
   assert.deepEqual(pick(where("")), [null, null, null]);
 });
 
+test("atsWhere: \"Anywhere\" is the world only when the location names no other place", () => {
+  assert.deepEqual(pick(where("Remote - Anywhere in the US")), ["remote", "US", ["Remote - Anywhere in the US"]]);
+  assert.deepEqual(pick(where("Remote, Anywhere in USA")), ["remote", "US", ["Remote, Anywhere in USA"]]);
+  assert.deepEqual(pick(where("Remote (anywhere in EMEA)")), ["remote", null, ["Remote (anywhere in EMEA)"]]);
+  assert.deepEqual(pick(where("Anywhere in Europe")), [null, null, ["Anywhere in Europe"]]);
+  assert.deepEqual(pick(where("Remote - Anywhere")), ["remote", null, ["Remote - Worldwide"]]);
+  for (const home of ["ES", "FI", "SE"]) {
+    assert.equal(outcome(verdict("Remote - Anywhere in the US", { home, abroad: [] })), "abroadOff");
+    assert.equal(outcome(verdict("Remote - Anywhere in the US", { home })), "restricted");
+    assert.equal(outcome(verdict("Remote (anywhere in EMEA)", { home })), "open: EMEA");
+    assert.equal(outcome(verdict("Anywhere in Europe", { home })), "open: Europe");
+  }
+});
+
+test("atsWhere: when only the location's words say remote, the title and the posting may still say hybrid or on-site", () => {
+  const said = (location, description, extra = {}) => atsWhere({ locations: [location], title: "Software Engineer", description, ...extra }).workplace;
+  assert.equal(said("Remote - Germany", "This role is hybrid, with two days a week in our Berlin office."), "hybrid");
+  assert.equal(said("Remote - EMEA", "The position is fully on-site in Amsterdam."), "onsite");
+  assert.equal(said("Spain (Remote)", "Please note: this is not a remote position."), "onsite");
+  assert.equal(said("Remote (Europe)", "This is not a remote role."), "onsite");
+  assert.equal(atsWhere({ locations: ["Remote - EMEA"], title: "Backend Engineer (Hybrid)" }).workplace, "hybrid");
+  // A company blurb or optional office days don't overrule it; the ATS's own field is trusted
+  assert.equal(said("Remote - Germany", "We offer a hybrid model in Berlin. Optional: two days a week in our Berlin office."), "remote");
+  assert.equal(said("Remote - Germany", "This role is hybrid.", { workplace: "remote" }), "remote");
+  for (const home of ["ES", "FI", "SE"]) {
+    assert.equal(outcome(verdict("Remote - Germany", { home }, { description: "This role is hybrid, with two days a week in our Berlin office." })), "notRemote");
+    assert.equal(outcome(verdict("Remote - EMEA", { home }, { description: "The position is fully on-site in Amsterdam." })), "notRemote");
+  }
+});
+
 test("atsWhere: several locations, the workplace field, the address country", () => {
   // The office isn't where the remote job is
   assert.deepEqual(pick(where("Berlin, Germany; Remote, Spain")), ["remote", "ES", null]);
@@ -53,12 +90,6 @@ test("atsWhere: several locations, the workplace field, the address country", ()
   assert.deepEqual(pick(where("Berlin", { country: "Germany" })), ["onsite", null, null]);
 });
 
-/** jbOpenTo on a job at that location (a posting that says nothing about where you live). */
-function verdict(location, opts, { description = "Build our APIs in Go.", ...extra } = {}) {
-  const job = { title: "Backend Engineer", company: "Acme", location, description };
-  return globalThis.jbOpenTo(job, atsWhere({ locations: [location], ...extra }), { ticked: [...EU_CODES], abroad: ["GB", "CA", "US"], ...opts });
-}
-const outcome = (v) => (v.open ? `open: ${v.to}` : v.reason);
 
 test("who can take it, living in Spain, Finland or Sweden", () => {
   // Spain: a job placed in Spain is in your country; one open to Spain and Portugal stays

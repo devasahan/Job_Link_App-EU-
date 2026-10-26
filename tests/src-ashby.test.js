@@ -102,3 +102,16 @@ test("a job: fields, links, the posting as plain text, an HTML-only posting stri
   assert.equal(bare.listing_type, "Full Time");
   assert.equal(bare.is_remote, "No");
 });
+
+test("where a job is: the location's words, which the posting may overrule; workplaceType and isRemote are trusted", () => {
+  const job = (location, descriptionPlain, extra = {}) => toJob({ id: "j", title: "Software Engineer", location, descriptionPlain, workplaceType: null, isRemote: null, ...extra }, company("posthog"));
+  assert.equal(job("Remote (Europe)", "This is not a remote role.")._where.workplace, "onsite");
+  assert.equal(job("Remote - Germany", "This role is hybrid, with two days a week in our Berlin office.")._where.workplace, "hybrid");
+  assert.equal(job("Remote - Germany", "This role is hybrid, with two days a week in our Berlin office.").is_remote, "No");
+  assert.equal(job("Remote - Germany", "We build developer tools in TypeScript.")._where.workplace, "remote");
+  assert.equal(job("Remote - Germany", "This role is hybrid.", { workplaceType: "Remote" })._where.workplace, "remote");
+  assert.equal(job("Remote - Germany", "This role is hybrid.", { isRemote: true })._where.workplace, "remote");
+  // "Anywhere in the US" is the US, not the world
+  const us = job("Remote - Anywhere in the US", "Go and Postgres.", { workplaceType: "Remote" });
+  assert.deepEqual([us._where.listedIn, us._where.open], ["US", ["Remote - Anywhere in the US"]]);
+});

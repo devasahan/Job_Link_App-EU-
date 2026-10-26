@@ -12,8 +12,9 @@
  * checked newest first until its Count; a board that isn't there (404) is
  * noted, not a failure (common.js runCompanies). Where a job is: workplaceType
  * when set (isRemote can disagree with it), else isRemote when true, else the
- * location words; its places are its location and secondary locations, and
- * the address country for a remote job that names no place (atsWhere).
+ * location words, which the posting may overrule ("this role is hybrid"); its
+ * places are its location and secondary locations, and the address country
+ * for a remote job that names no place (atsWhere).
  */
 
 import { normalizeJob, stripHtml } from "../util.js";
@@ -43,7 +44,8 @@ const toIso = (value) => {
 export function toJob(row, company) {
   const places = [text(row.location), ...(Array.isArray(row.secondaryLocations) ? row.secondaryLocations : []).map((s) => text(s?.location))].filter(Boolean);
   const unique = [...new Set(places)];
-  const where = atsWhere({ locations: unique, workplace: workplaceOf(row), country: countryOf(row.address) });
+  const description = text(row.descriptionPlain) ? String(row.descriptionPlain).trim() : stripHtml(row.descriptionHtml || "");
+  const where = atsWhere({ locations: unique, workplace: workplaceOf(row), country: countryOf(row.address), title: text(row.title), description });
   const location = unique.length > 3 ? `${unique.slice(0, 3).join("; ")} + ${unique.length - 3} more` : unique.join("; ");
   const link = /^https:\/\//i.test(text(row.jobUrl)) ? text(row.jobUrl) : `https://jobs.ashbyhq.com/${encodeURIComponent(company.token)}/${encodeURIComponent(text(row.id))}`;
   return {
@@ -57,7 +59,7 @@ export function toJob(row, company) {
       is_remote: where.workplace === "remote" ? true : where.workplace ? false : "",
       job_url: link,
       job_url_direct: /^https:\/\//i.test(text(row.applyUrl)) ? text(row.applyUrl) : "",
-      description: text(row.descriptionPlain) ? String(row.descriptionPlain).trim() : stripHtml(row.descriptionHtml || ""),
+      description,
     }),
     _id: `${company.token}:${text(row.id) || link}`,
     _where: where,
