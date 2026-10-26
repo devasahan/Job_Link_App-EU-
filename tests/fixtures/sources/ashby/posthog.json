@@ -1,0 +1,179 @@
+{
+  "comments": "PostHog. 1 Remote - EMEA; 2 plain Remote, isRemote with no workplaceType, an address in Germany; 3 workplaceType Hybrid though isRemote says true; 4 Remote - US; 5 not a developer; 6 unlisted; 7 old; 8 plain Remote with a US address (the head office's: the posting decides), hiring anywhere in the world.",
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "id": "5f1c0a6e-0001-4c1b-9a51-2f4b9d1e0001",
+      "title": "Senior Full Stack Engineer",
+      "department": "Engineering",
+      "team": "Product",
+      "employmentType": "FullTime",
+      "location": "Remote - EMEA",
+      "secondaryLocations": [],
+      "publishedAt": "{{ago:1h}}",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "address": {
+        "postalAddress": {
+          "addressCountry": "United Kingdom"
+        }
+      },
+      "jobUrl": "https://jobs.ashbyhq.com/posthog/5f1c0a6e-0001-4c1b-9a51-2f4b9d1e0001",
+      "applyUrl": "https://jobs.ashbyhq.com/posthog/5f1c0a6e-0001-4c1b-9a51-2f4b9d1e0001/application",
+      "descriptionHtml": "<p>Build product analytics in TypeScript and Python.</p><p>4+ years of experience.</p>",
+      "descriptionPlain": "Build product analytics in TypeScript and Python.\n4+ years of experience.",
+      "shouldDisplayCompensationOnJobPostings": false
+    },
+    {
+      "id": "5f1c0a6e-0002-4c1b-9a51-2f4b9d1e0002",
+      "title": "Backend Engineer",
+      "department": "Engineering",
+      "team": "Product",
+      "employmentType": "FullTime",
+      "location": "Remote",
+      "secondaryLocations": [],
+      "publishedAt": "{{ago:2h}}",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": null,
+      "address": {
+        "postalAddress": {
+          "addressCountry": "Germany"
+        }
+      },
+      "jobUrl": "https://jobs.ashbyhq.com/posthog/5f1c0a6e-0002-4c1b-9a51-2f4b9d1e0002",
+      "applyUrl": "https://jobs.ashbyhq.com/posthog/5f1c0a6e-0002-4c1b-9a51-2f4b9d1e0002/application",
+      "descriptionHtml": "<p>ClickHouse and Kafka pipelines.</p>",
+      "descriptionPlain": "ClickHouse and Kafka pipelines.",
+      "shouldDisplayCompensationOnJobPostings": false
+    },
+    {
+      "id": "5f1c0a6e-0003-4c1b-9a51-2f4b9d1e0003",
+      "title": "Software Engineer, Infrastructure",
+      "department": "Engineering",
+      "team": "Product",
+      "employmentType": "FullTime",
+      "location": "San Francisco, CA",
+      "secondaryLocations": [],
+      "publishedAt": "{{ago:3h}}",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Hybrid",
+      "address": {
+        "postalAddress": {
+          "addressCountry": "USA",
+          "addressLocality": "San Francisco"
+        }
+      },
+      "jobUrl": "https://jobs.ashbyhq.com/posthog/5f1c0a6e-0003-4c1b-9a51-2f4b9d1e0003",
+      "applyUrl": "https://jobs.ashbyhq.com/posthog/5f1c0a6e-0003-4c1b-9a51-2f4b9d1e0003/application",
+      "descriptionHtml": "<p>Kubernetes on AWS.</p>",
+      "descriptionPlain": "Kubernetes on AWS.",
+      "shouldDisplayCompensationOnJobPostings": false
+    },
+    {
+      "id": "5f1c0a6e-0004-4c1b-9a51-2f4b9d1e0004",
+      "title": "Senior Software Engineer",
+      "department": "Engineering",
+      "team": "Product",
+      "employmentType": "FullTime",
+      "location": "Remote - US",
+      "secondaryLocations": [],
+      "publishedAt": "{{ago:1h}}",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "address": {
+        "postalAddress": {
+          "addressCountry": "USA"
+        }
+      },
+      "jobUrl": "https://jobs.ashbyhq.com/posthog/5f1c0a6e-0004-4c1b-9a51-2f4b9d1e0004",
+      "applyUrl": "https://jobs.ashbyhq.com/posthog/5f1c0a6e-0004-4c1b-9a51-2f4b9d1e0004/application",
+      "descriptionHtml": "<p>Go services.</p>",
+      "descriptionPlain": "Go services.",
+      "shouldDisplayCompensationOnJobPostings": false
+    },
+    {
+      "id": "5f1c0a6e-0005-4c1b-9a51-2f4b9d1e0005",
+      "title": "Account Executive, EMEA",
+      "department": "Engineering",
+      "team": "Product",
+      "employmentType": "FullTime",
+      "location": "Remote - EMEA",
+      "secondaryLocations": [],
+      "publishedAt": "{{ago:2h}}",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "address": null,
+      "jobUrl": "https://jobs.ashbyhq.com/posthog/5f1c0a6e-0005-4c1b-9a51-2f4b9d1e0005",
+      "applyUrl": "https://jobs.ashbyhq.com/posthog/5f1c0a6e-0005-4c1b-9a51-2f4b9d1e0005/application",
+      "descriptionHtml": "<p>Sell PostHog to EMEA customers.</p>",
+      "descriptionPlain": "Sell PostHog to EMEA customers.",
+      "shouldDisplayCompensationOnJobPostings": false
+    },
+    {
+      "id": "5f1c0a6e-0006-4c1b-9a51-2f4b9d1e0006",
+      "title": "Frontend Engineer",
+      "department": "Engineering",
+      "team": "Product",
+      "employmentType": "FullTime",
+      "location": "Remote - EMEA",
+      "secondaryLocations": [],
+      "publishedAt": "{{ago:1h}}",
+      "isListed": false,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "address": null,
+      "jobUrl": "https://jobs.ashbyhq.com/posthog/5f1c0a6e-0006-4c1b-9a51-2f4b9d1e0006",
+      "applyUrl": "https://jobs.ashbyhq.com/posthog/5f1c0a6e-0006-4c1b-9a51-2f4b9d1e0006/application",
+      "descriptionHtml": "<p>React and Kea.</p>",
+      "descriptionPlain": "React and Kea.",
+      "shouldDisplayCompensationOnJobPostings": false
+    },
+    {
+      "id": "5f1c0a6e-0007-4c1b-9a51-2f4b9d1e0007",
+      "title": "Senior Platform Engineer",
+      "department": "Engineering",
+      "team": "Product",
+      "employmentType": "FullTime",
+      "location": "Remote - EMEA",
+      "secondaryLocations": [],
+      "publishedAt": "{{ago:4d}}",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "address": null,
+      "jobUrl": "https://jobs.ashbyhq.com/posthog/5f1c0a6e-0007-4c1b-9a51-2f4b9d1e0007",
+      "applyUrl": "https://jobs.ashbyhq.com/posthog/5f1c0a6e-0007-4c1b-9a51-2f4b9d1e0007/application",
+      "descriptionHtml": "<p>Terraform.</p>",
+      "descriptionPlain": "Terraform.",
+      "shouldDisplayCompensationOnJobPostings": false
+    },
+    {
+      "id": "5f1c0a6e-0008-4c1b-9a51-2f4b9d1e0008",
+      "title": "Mobile Engineer (iOS)",
+      "department": "Engineering",
+      "team": "Product",
+      "employmentType": "FullTime",
+      "location": "Remote",
+      "secondaryLocations": [],
+      "publishedAt": "{{ago:5h}}",
+      "isListed": true,
+      "isRemote": false,
+      "workplaceType": null,
+      "address": {
+        "postalAddress": {
+          "addressCountry": "USA"
+        }
+      },
+      "jobUrl": "https://jobs.ashbyhq.com/posthog/5f1c0a6e-0008-4c1b-9a51-2f4b9d1e0008",
+      "applyUrl": "https://jobs.ashbyhq.com/posthog/5f1c0a6e-0008-4c1b-9a51-2f4b9d1e0008/application",
+      "descriptionHtml": "<p>Swift and SwiftUI.</p><p>We hire engineers anywhere in the world.</p>",
+      "descriptionPlain": "Swift and SwiftUI.\nWe hire engineers anywhere in the world.",
+      "shouldDisplayCompensationOnJobPostings": false
+    }
+  ]
+}

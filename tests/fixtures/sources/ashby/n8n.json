@@ -1,0 +1,132 @@
+{
+  "comments": "n8n. 1 Berlin with secondary locations Remote - Germany and Remote - Netherlands, workplaceType Remote; 2 OnSite; 3 Remote in Germany, must be based there; 4 an internship; 5 a region with no workplace field, the posting says hybrid.",
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "id": "0b6d3c2a-1001-4f6e-8d7a-6a1e2c3b1001",
+      "title": "Senior Backend Engineer",
+      "department": "Engineering",
+      "team": "Product",
+      "employmentType": "FullTime",
+      "location": "Berlin",
+      "secondaryLocations": [
+        {
+          "location": "Remote - Germany",
+          "address": {
+            "postalAddress": {
+              "addressCountry": "Germany"
+            }
+          }
+        },
+        {
+          "location": "Remote - Netherlands",
+          "address": {
+            "postalAddress": {
+              "addressCountry": "Netherlands"
+            }
+          }
+        }
+      ],
+      "publishedAt": "{{ago:2h}}",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "address": {
+        "postalAddress": {
+          "addressCountry": "Germany",
+          "addressLocality": "Berlin"
+        }
+      },
+      "jobUrl": "https://jobs.ashbyhq.com/n8n/0b6d3c2a-1001-4f6e-8d7a-6a1e2c3b1001",
+      "applyUrl": "https://jobs.ashbyhq.com/n8n/0b6d3c2a-1001-4f6e-8d7a-6a1e2c3b1001/application",
+      "descriptionHtml": "<p>Node.js and TypeScript workflow engine.</p>",
+      "descriptionPlain": "Node.js and TypeScript workflow engine.",
+      "shouldDisplayCompensationOnJobPostings": false
+    },
+    {
+      "id": "0b6d3c2a-1002-4f6e-8d7a-6a1e2c3b1002",
+      "title": "Software Engineer, AI",
+      "department": "Engineering",
+      "team": "Product",
+      "employmentType": "FullTime",
+      "location": "Berlin, Germany",
+      "secondaryLocations": [],
+      "publishedAt": "{{ago:3h}}",
+      "isListed": true,
+      "isRemote": false,
+      "workplaceType": "OnSite",
+      "address": {
+        "postalAddress": {
+          "addressCountry": "Germany",
+          "addressLocality": "Berlin"
+        }
+      },
+      "jobUrl": "https://jobs.ashbyhq.com/n8n/0b6d3c2a-1002-4f6e-8d7a-6a1e2c3b1002",
+      "applyUrl": "https://jobs.ashbyhq.com/n8n/0b6d3c2a-1002-4f6e-8d7a-6a1e2c3b1002/application",
+      "descriptionHtml": "<p>LLM agents in our Berlin office.</p>",
+      "descriptionPlain": "LLM agents in our Berlin office.",
+      "shouldDisplayCompensationOnJobPostings": false
+    },
+    {
+      "id": "0b6d3c2a-1003-4f6e-8d7a-6a1e2c3b1003",
+      "title": "Senior Frontend Engineer",
+      "department": "Engineering",
+      "team": "Product",
+      "employmentType": "FullTime",
+      "location": "Remote",
+      "secondaryLocations": [],
+      "publishedAt": "{{ago:4h}}",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "address": {
+        "postalAddress": {
+          "addressCountry": "Germany"
+        }
+      },
+      "jobUrl": "https://jobs.ashbyhq.com/n8n/0b6d3c2a-1003-4f6e-8d7a-6a1e2c3b1003",
+      "applyUrl": "https://jobs.ashbyhq.com/n8n/0b6d3c2a-1003-4f6e-8d7a-6a1e2c3b1003/application",
+      "descriptionHtml": "<p>Vue.js editor canvas.</p><p>You must be based in Germany.</p>",
+      "descriptionPlain": "Vue.js editor canvas.\nYou must be based in Germany.",
+      "shouldDisplayCompensationOnJobPostings": false
+    },
+    {
+      "id": "0b6d3c2a-1004-4f6e-8d7a-6a1e2c3b1004",
+      "title": "Software Engineering Intern",
+      "department": "Engineering",
+      "team": "Product",
+      "employmentType": "Intern",
+      "location": "Remote - Europe",
+      "secondaryLocations": [],
+      "publishedAt": "{{ago:5h}}",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "address": null,
+      "jobUrl": "https://jobs.ashbyhq.com/n8n/0b6d3c2a-1004-4f6e-8d7a-6a1e2c3b1004",
+      "applyUrl": "https://jobs.ashbyhq.com/n8n/0b6d3c2a-1004-4f6e-8d7a-6a1e2c3b1004/application",
+      "descriptionHtml": "<p>Six months with our core team.</p>",
+      "descriptionPlain": "Six months with our core team.",
+      "shouldDisplayCompensationOnJobPostings": false
+    },
+    {
+      "id": "0b6d3c2a-1005-4f6e-8d7a-6a1e2c3b1005",
+      "title": "DevOps Engineer",
+      "department": "Engineering",
+      "team": "Product",
+      "employmentType": "FullTime",
+      "location": "Europe",
+      "secondaryLocations": [],
+      "publishedAt": "{{ago:6h}}",
+      "isListed": true,
+      "isRemote": false,
+      "workplaceType": null,
+      "address": null,
+      "jobUrl": "https://jobs.ashbyhq.com/n8n/0b6d3c2a-1005-4f6e-8d7a-6a1e2c3b1005",
+      "applyUrl": "https://jobs.ashbyhq.com/n8n/0b6d3c2a-1005-4f6e-8d7a-6a1e2c3b1005/application",
+      "descriptionHtml": "<p>This role is hybrid, two days a week in our Berlin office.</p>",
+      "descriptionPlain": "This role is hybrid, two days a week in our Berlin office.",
+      "shouldDisplayCompensationOnJobPostings": false
+    }
+  ]
+}

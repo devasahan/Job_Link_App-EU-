@@ -1,0 +1,33 @@
+{
+  "id": 5012345004,
+  "internal_job_id": 1012345004,
+  "title": "Backend Developer",
+  "updated_at": "{{ago:5h}}",
+  "requisition_id": "R-5004",
+  "location": {
+    "name": "Remote"
+  },
+  "absolute_url": "https://job-boards.greenhouse.io/grafanalabs/jobs/5012345004",
+  "language": "en",
+  "metadata": null,
+  "company_name": null,
+  "first_published": "{{ago:5h}}",
+  "content": "&lt;p&gt;Python and PostgreSQL back end.&lt;/p&gt;&lt;p&gt;We hire engineers anywhere in Europe.&lt;/p&gt;",
+  "departments": [
+    {
+      "id": 9001,
+      "name": "Engineering",
+      "child_ids": [],
+      "parent_id": null
+    }
+  ],
+  "offices": [
+    {
+      "id": 73,
+      "name": "Remote",
+      "location": null,
+      "child_ids": [],
+      "parent_id": null
+    }
+  ]
+}

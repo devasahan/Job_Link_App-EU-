@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "JobBridge EU",
-  "version": "2.4.0",
-  "description": "Fetch remote developer jobs open to people in the EU from Indeed, Himalayas, Jobicy, Hacker News and more, then download Excel.",
+  "version": "2.5.0",
+  "description": "Remote developer jobs open to people in the EU, from Indeed, remote job boards and company boards on Greenhouse and Ashby, as Excel.",
   "action": {
     "default_popup": "popup.html",
     "default_title": "JobBridge EU",
@@ -27,7 +27,10 @@
     "https://jobicy.com/*",
     "https://hn.algolia.com/*",
     "https://euremotejobs.com/*",
-    "https://arc.dev/*"
+    "https://arc.dev/*",
+    "https://boards-api.greenhouse.io/*",
+    "https://boards-api.eu.greenhouse.io/*",
+    "https://api.ashbyhq.com/*"
   ],
   "declarative_net_request": {
     "rule_resources": [

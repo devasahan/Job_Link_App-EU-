@@ -1,0 +1,33 @@
+{
+  "id": 4512345101,
+  "internal_job_id": 512345101,
+  "title": "Backend Software Engineer",
+  "updated_at": "{{ago:8h}}",
+  "requisition_id": "R-5101",
+  "location": {
+    "name": "Remote - Europe"
+  },
+  "absolute_url": "https://job-boards.eu.greenhouse.io/proton/jobs/4512345101",
+  "language": "en",
+  "metadata": null,
+  "company_name": null,
+  "first_published": "{{ago:8h}}",
+  "content": "&lt;p&gt;Rust and Go services for Proton Mail.&lt;/p&gt;&lt;p&gt;Remote anywhere in Europe.&lt;/p&gt;",
+  "departments": [
+    {
+      "id": 9001,
+      "name": "Engineering",
+      "child_ids": [],
+      "parent_id": null
+    }
+  ],
+  "offices": [
+    {
+      "id": 81,
+      "name": "Remote Europe",
+      "location": null,
+      "child_ids": [],
+      "parent_id": null
+    }
+  ]
+}

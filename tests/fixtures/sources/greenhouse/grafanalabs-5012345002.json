@@ -1,0 +1,33 @@
+{
+  "id": 5012345002,
+  "internal_job_id": 1012345002,
+  "title": "Software Engineer, Frontend",
+  "updated_at": "{{ago:3h}}",
+  "requisition_id": "R-5002",
+  "location": {
+    "name": "Spain (Remote)"
+  },
+  "absolute_url": "https://job-boards.greenhouse.io/grafanalabs/jobs/5012345002",
+  "language": "en",
+  "metadata": null,
+  "company_name": null,
+  "first_published": "{{ago:3h}}",
+  "content": "&lt;p&gt;Work on our React and TypeScript front end.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;3+ years of experience&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;You must be based in Spain.&lt;/p&gt;",
+  "departments": [
+    {
+      "id": 9001,
+      "name": "Engineering",
+      "child_ids": [],
+      "parent_id": null
+    }
+  ],
+  "offices": [
+    {
+      "id": 72,
+      "name": "Spain",
+      "location": "Spain",
+      "child_ids": [],
+      "parent_id": null
+    }
+  ]
+}

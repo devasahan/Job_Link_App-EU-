@@ -18,15 +18,18 @@
  *                 freelance 50, agencies 60); the group's by default
  *   budgetMs      how long it may run; the group's by default
  *   gaps          { host: ms } between two requests to that host (default 1 s)
+ *   timeoutMs     how long one request may wait for its answer (default 20 s)
  *   robots        "api" (a documented API) or "obey" (robots.txt is checked)
  *   headerRule    id of its rule in rules/headers.json, if it needs one
  *   pending       the adapter isn't merged yet: hidden and never run
  * Optional: needsContract (contract work only: skipped while Type is Full time,
  * as the freelance group is), optionalHosts (hosts granted at run time, not
- * in host_permissions; from 2.6).
+ * in host_permissions; from 2.6), companies (a careers source's boards, from
+ * careers/companies.js: each company counts as its own source for Count).
  */
 
 import { INDEED_SITES } from "./indeed.js";
+import { ASHBY_BOARDS, GREENHOUSE_BOARDS } from "./careers/companies.js";
 
 export const GROUPS = [
   { id: "boards", label: "Job boards", priority: 30, budgetMs: 120e3 },
@@ -125,6 +128,37 @@ export const SOURCES = [
     defaultOn: false,
     gaps: { "arc.dev": 1500 },
     robots: "obey",
+  },
+  {
+    id: "greenhouse",
+    label: "Greenhouse",
+    group: "careers",
+    hint: `${GREENHOUSE_BOARDS.length} companies`,
+    url: "https://www.greenhouse.com",
+    module: "./careers/greenhouse.js",
+    // The EU host only for boards the main one doesn't know
+    hosts: ["boards-api.greenhouse.io", "boards-api.eu.greenhouse.io"],
+    defaultOn: true,
+    // ~85 board lists, then the postings that pass their screen: one or two read alone, or the board
+    // once more with every posting; the default 20 s timeout, so a host that hangs is soon given up
+    budgetMs: 300e3,
+    gaps: { "boards-api.greenhouse.io": 300, "boards-api.eu.greenhouse.io": 300 },
+    companies: GREENHOUSE_BOARDS,
+  },
+  {
+    id: "ashby",
+    label: "Ashby",
+    group: "careers",
+    hint: `${ASHBY_BOARDS.length} companies`,
+    url: "https://www.ashbyhq.com",
+    module: "./careers/ashby.js",
+    hosts: ["api.ashbyhq.com"],
+    defaultOn: true,
+    // One answer per company, with every posting in it: larger and slower than a list
+    budgetMs: 300e3,
+    gaps: { "api.ashbyhq.com": 500 },
+    timeoutMs: 30e3,
+    companies: ASHBY_BOARDS,
   },
 ].map(withDefaults);
 

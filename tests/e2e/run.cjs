@@ -4,7 +4,9 @@
 // and read the Excel the runner saves. Nothing reaches the network.
 // Scenarios: the popup; a run with every board (per-source lines, Left out,
 // merges, Site and Also on); You live in; two sources failing while the others
-// export; Stop and download; Check sources (no download) with Copy report.
+// export; Stop and download; Check sources (no download) with Copy report;
+// the company job boards (Greenhouse, Ashby: the fixtures' companies answer,
+// every other company of the real list is a quick 404).
 // Runs tick their sources explicitly, so later releases' sources don't move
 // these numbers.
 // PLAYWRIGHT=<path to playwright> overrides where Playwright is loaded from.
@@ -211,7 +213,7 @@ const RUN_LINES = {
 };
 
 (async () => {
-  const { SOURCES } = await import(pathToFileURL(path.join(SRC, "scrapers/sources.js")).href);
+  const { SOURCES, GROUPS } = await import(pathToFileURL(path.join(SRC, "scrapers/sources.js")).href);
   const live = SOURCES.filter((s) => !s.pending);
   const label = (id) => SOURCES.find((s) => s.id === id).label;
 
@@ -220,8 +222,13 @@ const RUN_LINES = {
     const { context, popup } = await launch("popup");
     const groups = await popup.$$eval(".source-group", (els) => els.map((e) => e.querySelector("summary").textContent.replace(/\s+/g, " ").trim()));
     const boards = live.filter((s) => s.group === "boards");
-    const on = boards.filter((s) => s.defaultOn).length;
-    check(groups.length === 1 && groups[0] === `Job boards · ${on} of ${boards.length}`, `one Platforms group with counts: ${groups.join(" | ")}`);
+    // A group shows once it has sources: the job boards, then the company career pages
+    const shown = GROUPS.map((g) => ({ ...g, sources: live.filter((s) => s.group === g.id) })).filter((g) => g.sources.length);
+    const want = shown.map((g) => `${g.label} · ${g.sources.filter((s) => s.defaultOn).length} of ${g.sources.length}`);
+    check(
+      groups.join(" | ") === want.join(" | ") && want.join(" | ") === `Job boards · 5 of 6 | Company career pages · 2 of 2`,
+      `the Platforms groups with counts: ${groups.join(" | ")}`
+    );
     const sites = await popup.$$eval('input[name="site"]', (els) => els.map((e) => `${e.value}:${e.checked}`));
     check(
       sites.join(", ") === live.map((s) => `${s.id}:${s.defaultOn}`).join(", ") && DEFAULTS.every((id) => sites.includes(`${id}:true`)) && sites.includes("arc:false"),
@@ -236,7 +243,9 @@ const RUN_LINES = {
     check((await greyed()).length === 0, "no country greyed out with the remote boards ticked");
     await popup.click(".source-group summary");
     await popup.screenshot({ path: path.join(OUT, "popup-sources.png"), fullPage: true });
-    await popup.click('[data-group-pick="none"]');
+    // None in every group: the company boards search every country too
+    await popup.evaluate(() => document.querySelectorAll(".source-group").forEach((d) => (d.open = true)));
+    for (const button of await popup.$$('[data-group-pick="none"]')) await button.click();
     await popup.check('input[name="site"][value="indeed"]');
     check((await greyed()).join(",") === "BG,HR,CY,EE,LV,LT,MT,SK,SI", `Indeed alone greys out its missing sites: ${await greyed()}`);
     check((await popup.textContent(".source-group summary")).trim().endsWith(`· 1 of ${boards.length}`), "the group count follows the ticks");
@@ -412,9 +421,14 @@ const RUN_LINES = {
     check(run.status === `Checked ${live.length} sources: ${live.length - 1} answered, 1 failed. Copy report shows what each sent back.`, `status: ${run.status}`);
     check(run.lines.length === live.length, `a line for every source: ${run.lines.map((l) => l.id)}`);
     check(/^Indeed: OK · \d+ scanned → [1-3] kept/.test(line(run.lines, "indeed").text), "Indeed OK, at most 3 kept", line(run.lines, "indeed").text);
-    for (const id of ["jobicy", "hackernews", "euremotejobs", "arc"]) {
+    for (const id of ["jobicy", "hackernews", "euremotejobs", "arc", "greenhouse", "ashby"]) {
       check(new RegExp(`^${label(id).replace(/\./g, "\\.")}: OK · \\d+ scanned → [1-9]\\d* kept`).test(line(run.lines, id).text), `${label(id)} OK`, line(run.lines, id).text);
     }
+    // Every company's board is asked; the postings only until Greenhouse has a few
+    const lists = state.asked.filter((u) => /boards-api\.greenhouse\.io\/v1\/boards\/[^/]+\/jobs$/.test(u));
+    const postings = state.asked.filter((u) => /boards-api\.(?:eu\.)?greenhouse\.io\/v1\/boards\/[^/]+\/jobs\/\d+$/.test(u));
+    check(lists.length === 85 && postings.length <= 4, `Greenhouse: every board listed (${lists.length}), ${postings.length} postings read`, postings.join("\n"));
+    check(/ kept \(85 companies\) \(/.test(line(run.lines, "greenhouse").text) && / kept \(84 companies\) \(/.test(line(run.lines, "ashby").text), "the check lines count the companies");
     check(/^Himalayas: FAILED · HTTP 500 at himalayas\.app\/jobs\/api\/search/.test(line(run.lines, "himalayas").text), "Himalayas FAILED", line(run.lines, "himalayas").text);
     check(/Each source: up to 3 jobs from the last 7 days/.test(run.log), "the log says what a check does");
     check(state.indeed.length > 0 && state.asked.some((u) => /^https:\/\/arc\.dev\/remote-jobs/.test(u)), "Indeed and Arc.dev were asked although unticked");
@@ -424,8 +438,63 @@ const RUN_LINES = {
     const copied = await run.runner.evaluate(() => navigator.clipboard.readText().catch((e) => `unreadable: ${e.message}`));
     check(/^JobBridge EU [\d.]+ · source check · /.test(copied), "Copy report: a header", copied.slice(0, 200));
     check(/== Himalayas ==\nGET https:\/\/himalayas\.app\/jobs\/api\/search\?sort=recent&page=1 → HTTP 500\ncontent-type: text\/plain\nInternal Server Error/.test(copied), "Copy report: the failed source's response sample", copied);
-    check(!/== (Indeed|Jobicy|Hacker News|EU Remote Jobs|Arc\.dev) ==/.test(copied) && !/cookie/i.test(copied), "no samples for sources that kept jobs, no cookies");
+    check(!/== (Indeed|Jobicy|Hacker News|EU Remote Jobs|Arc\.dev|Greenhouse|Ashby) ==/.test(copied) && !/cookie/i.test(copied), "no samples for sources that kept jobs, no cookies");
+    check(
+      /\nGreenhouse by company\n- GitLab \(gitlab\): not found \(HTTP 404\)\n/.test(copied) && /\n- Grafana Labs \(grafanalabs\): 10 jobs listed, \d+ scanned → \d+ kept\n/.test(copied) && /\nAshby by company\n- PostHog \(posthog\): 7 jobs listed, /.test(copied),
+      "Copy report: a line per company of Greenhouse and Ashby",
+      copied.slice(0, 3000)
+    );
     await run.runner.screenshot({ path: path.join(OUT, "runner-check.png"), fullPage: true });
+    await context.close();
+  }
+
+  // ---- 7. Company job boards: Greenhouse and Ashby alone ----
+  {
+    const { context, popup, state } = await launch("careers");
+    await pickSources(popup, ["greenhouse", "ashby"]);
+    await pickCountries(popup, ["DE", "ES", "FR", "NL"]);
+    await popup.fill("#count", "20");
+    await popup.selectOption("#job_type", "both");
+    await popup.selectOption("#date_preset", "today");
+    const t0 = Date.now();
+    const run = await runFrom(popup, context);
+    const secs = (Date.now() - t0) / 1000;
+    console.log(showLines(run), `\n  (${secs.toFixed(1)} s)`);
+    check(run.downloaded, "the run downloads Excel", run.status);
+    check(
+      line(run.lines, "greenhouse").text ===
+        "Greenhouse: 13 scanned → 6 kept (85 companies). Left out: 1 not developer roles, 1 older than 24 hours, 3 hybrid or not remote, 1 limited to other countries, 1 not open to Europe",
+      "Greenhouse's line counts its companies",
+      line(run.lines, "greenhouse").text
+    );
+    check(
+      line(run.lines, "ashby").text ===
+        "Ashby: 12 scanned → 5 kept (84 companies). Left out: 1 not developer roles, 1 older than 24 hours, 1 other job types, 3 hybrid or not remote, 1 limited to other countries",
+      "Ashby's line counts its companies",
+      line(run.lines, "ashby").text
+    );
+    check(run.lines.every((l) => l.status === "ok"), "boards not found don't fail a source");
+    check(/Greenhouse: 83 companies not found \(HTTP 404\): GitLab \(gitlab\), Canonical \(canonical\), /.test(run.log) && /Ashby: 82 companies not found \(HTTP 404\): Supabase \(supabase\), /.test(run.log), "the log names the boards not found", run.log);
+    check(secs < 90, `the 169 companies take ${secs.toFixed(1)} s`);
+    // Proton's board is in Greenhouse's EU region: asked there after the main host's 404, its postings too
+    const proton = state.asked.filter((u) => /\/boards\/proton\//.test(u)).map((u) => new URL(u).host);
+    check(proton[0] === "boards-api.greenhouse.io" && proton.slice(1).every((h) => h === "boards-api.eu.greenhouse.io") && proton.length === 4, `Proton: the main host, then the EU host: ${proton.join(" ")}`);
+    // Grafana Labs has 5 jobs that pass the screen: its board once more with every posting, not 5 requests
+    const grafana = state.asked.filter((u) => /\/v1\/boards\/grafanalabs\/jobs/.test(u)).map((u) => u.split("/grafanalabs/jobs")[1] || "list");
+    check(grafana.join(" ") === "list ?content=true", `Grafana Labs: its list, then every posting in one answer: ${grafana.join(" ")}`);
+    const { rows } = readSheet(run.file);
+    console.log("rows:", JSON.stringify(rows.map((r) => [r.Title, r.Company, r.Site, r.Country || "", r["Open to"]])));
+    check(rows.length === 11 && run.merge === "0 duplicates merged, 0 already downloaded", `11 rows (Greenhouse 6 + Ashby 5): ${rows.length}, ${run.merge}`);
+    check([...new Set(rows.map((r) => r.Site))].sort().join(",") === "Ashby,Greenhouse", "Site is Greenhouse or Ashby");
+    check(
+      [...new Set(rows.map((r) => r.Company))].sort().join(",") === "Grafana Labs,PostHog,Proton,n8n",
+      `the employer is the Company: ${[...new Set(rows.map((r) => r.Company))].join(", ")}`
+    );
+    const spain = rows.find((r) => r.Title === "Software Engineer, Frontend") || {};
+    check(spain.Company === "Grafana Labs" && spain.Country === "Spain" && spain["Open to"] === "Spain" && spain.Remote === "Yes", `"Spain (Remote)" is listed in Spain: ${JSON.stringify(spain)}`);
+    const n8n = rows.find((r) => r.Company === "n8n" && r.Title === "Senior Backend Engineer") || {};
+    check(n8n.Site === "Ashby" && n8n["Open to"] === "Germany, Netherlands" && /^https:\/\/jobs\.ashbyhq\.com\/n8n\/.+\/application$/.test(n8n["Direct URL"] || ""), `an Ashby job: open to its remote places, its apply link as Direct URL: ${JSON.stringify(n8n)}`);
+    check(rows.some((r) => r.Company === "Proton" && /^https:\/\/job-boards\.eu\.greenhouse\.io\/proton\/jobs\//.test(r["Job URL"])), "a Greenhouse job links to its board page");
     await context.close();
   }
 

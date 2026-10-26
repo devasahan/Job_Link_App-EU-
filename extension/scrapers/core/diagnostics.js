@@ -85,7 +85,23 @@ function partsText(report) {
   const parts = Object.values(report.parts || {});
   if (!parts.length) return "";
   const failed = parts.filter((p) => p.error && !p.kept).length;
-  return ` (${parts.length} ${parts.length === 1 ? "part" : "parts"}${failed ? `, ${failed} failed` : ""})`;
+  // A careers source's parts are its companies
+  const [one, many] = report.group === "careers" ? ["company", "companies"] : ["part", "parts"];
+  return ` (${parts.length} ${parts.length === 1 ? one : many}${failed ? `, ${failed} failed` : ""})`;
+}
+
+/**
+ * Copy report's line for one part (a company):
+ *   "GitLab (gitlab): 40 jobs listed, 12 scanned → 3 kept"
+ *   "Mozilla (mozilla): not found (HTTP 404)"
+ *   "Acme (acme): failed: HTTP 500 at boards-api.greenhouse.io/v1/boards/acme/jobs"
+ */
+export function partLine(name, part) {
+  const who = part.key && part.key !== name ? `${name} (${part.key})` : name;
+  const counts = `${part.scanned} scanned → ${part.kept} kept`;
+  if (part.error) return `${who}: failed: ${part.error}${part.scanned ? ` (${counts})` : ""}`;
+  if (part.note && !part.scanned) return `${who}: ${part.note}`;
+  return `${who}: ${part.note ? `${part.note}, ` : ""}${counts}`;
 }
 
 /**
@@ -107,7 +123,11 @@ export function sourceLine(report) {
   return `${label}: ${counts}${stopped}`;
 }
 
-/** Check sources mode: does the source answer, and with jobs? */
+/**
+ * Check sources mode: does the source answer, and with jobs? A careers
+ * source counts its companies, and those that failed:
+ *   "Greenhouse: OK · 13 scanned → 6 kept (85 companies, 2 failed) (27.0 s)"
+ */
 export function checkLine(report) {
   const label = report.label || report.id;
   const secs = report.ms ? ` (${(report.ms / 1000).toFixed(1)} s)` : "";
@@ -115,14 +135,15 @@ export function checkLine(report) {
   if (report.status === "failed") return `${label}: FAILED · ${report.error || "no answer"}${secs}`;
   if (!report.scanned) return `${label}: answered, but no jobs in the last 7 days${secs}`;
   const partial = report.status === "incomplete" ? ` · stopped early: ${report.error}` : "";
-  return `${label}: OK · ${report.scanned} scanned → ${report.kept} kept${partial}${secs}`;
+  return `${label}: OK · ${report.scanned} scanned → ${report.kept} kept${partsText(report)}${partial}${secs}`;
 }
 
 /** Did the source fail or keep nothing? Its response samples go into Copy report. */
 export const needsSamples = (report) => report.status === "failed" || (report.status !== "skipped" && !report.kept);
 
 /**
- * Copy report: the run log, each source's line, and the response samples of
+ * Copy report: the run log, each source's line, a line per company of each
+ * careers source (so a stale board token shows), and the response samples of
  * the sources that failed or kept nothing (status, a few headers, the first
  * 2 KB), so a live failure can be fixed from what the site really sent. Samples
  * never hold cookies (http.js keeps a short header list).
@@ -136,6 +157,11 @@ export function reportText({ version = "", mode = "run", at = new Date(), log = 
     ...reports.map((r) => `- ${check ? checkLine(r) : sourceLine(r)}`),
   ];
   if (!check) lines.push(`${merged} duplicates merged, ${skipped} already downloaded`);
+  for (const r of reports) {
+    const parts = Object.entries(r.parts || {});
+    if (r.group !== "careers" || !parts.length) continue;
+    lines.push("", `${r.label} by company`, ...parts.map(([name, part]) => `- ${partLine(name, part)}`));
+  }
   lines.push("", "Log", log.trim());
   const sampled = reports.filter((r) => needsSamples(r) && r.samples?.length);
   if (sampled.length) {

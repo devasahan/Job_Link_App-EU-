@@ -1,0 +1,68 @@
+{
+  "notes": "Greenhouse Job Board API (developers.greenhouse.io/job-board.html): GET /v1/boards/{token}/jobs lists jobs[] (id, title, location.name, first_published, updated_at, absolute_url, metadata) without content; GET /v1/boards/{token}/jobs/{id} adds content (HTML escaped once more), departments and offices; GET /v1/boards/{token}/jobs?content=true lists every job that way (Grafana Labs only here: Proton's two survivors are read one by one). An unknown board is a 404 (any URL with no route here). Companies: grafanalabs (main host), proton (EU host only); mozilla and every other token 404.",
+  "routes": [
+    {
+      "url": "https://boards-api.greenhouse.io/v1/boards/grafanalabs/jobs",
+      "query": {
+        "content": "true"
+      },
+      "file": "grafanalabs-jobs-content.json"
+    },
+    {
+      "url": "https://boards-api.greenhouse.io/v1/boards/grafanalabs/jobs",
+      "file": "grafanalabs-jobs.json"
+    },
+    {
+      "url": "https://boards-api.eu.greenhouse.io/v1/boards/proton/jobs",
+      "file": "proton-jobs.json"
+    },
+    {
+      "url": "https://boards-api.greenhouse.io/v1/boards/grafanalabs/jobs/5012345001",
+      "file": "grafanalabs-5012345001.json"
+    },
+    {
+      "url": "https://boards-api.greenhouse.io/v1/boards/grafanalabs/jobs/5012345002",
+      "file": "grafanalabs-5012345002.json"
+    },
+    {
+      "url": "https://boards-api.greenhouse.io/v1/boards/grafanalabs/jobs/5012345004",
+      "file": "grafanalabs-5012345004.json"
+    },
+    {
+      "url": "https://boards-api.greenhouse.io/v1/boards/grafanalabs/jobs/5012345007",
+      "file": "grafanalabs-5012345007.json"
+    },
+    {
+      "url": "https://boards-api.greenhouse.io/v1/boards/grafanalabs/jobs/5012345008",
+      "file": "grafanalabs-5012345008.json"
+    },
+    {
+      "url": "https://boards-api.greenhouse.io/v1/boards/grafanalabs/jobs/5012345010",
+      "file": "grafanalabs-5012345010.json"
+    },
+    {
+      "url": "https://boards-api.eu.greenhouse.io/v1/boards/proton/jobs/4512345101",
+      "file": "proton-4512345101.json"
+    },
+    {
+      "url": "https://boards-api.eu.greenhouse.io/v1/boards/proton/jobs/4512345103",
+      "file": "proton-4512345103.json"
+    },
+    {
+      "url": "https://boards-api.greenhouse.io/v1/boards/mozilla/jobs",
+      "status": 404,
+      "body": {
+        "status": 404,
+        "error": "Job not found"
+      }
+    },
+    {
+      "url": "https://boards-api.eu.greenhouse.io/v1/boards/mozilla/jobs",
+      "status": 404,
+      "body": {
+        "status": 404,
+        "error": "Job not found"
+      }
+    }
+  ]
+}

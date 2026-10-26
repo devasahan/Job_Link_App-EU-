@@ -1,0 +1,19 @@
+{
+  "notes": "Ashby public job posting API (developers.ashbyhq.com, Job Postings API): GET /posting-api/job-board/{token} gives every job with its posting: title, location, secondaryLocations[{location, address}], workplaceType (Remote, Hybrid, OnSite or null), isRemote, isListed, publishedAt, employmentType (FullTime, PartTime, Intern, Contract, Temporary), address.postalAddress.addressCountry, descriptionPlain, descriptionHtml, jobUrl, applyUrl. Companies: posthog, n8n; sentry and every other token 404.",
+  "routes": [
+    {
+      "url": "https://api.ashbyhq.com/posting-api/job-board/posthog",
+      "file": "posthog.json"
+    },
+    {
+      "url": "https://api.ashbyhq.com/posting-api/job-board/n8n",
+      "file": "n8n.json"
+    },
+    {
+      "url": "https://api.ashbyhq.com/posting-api/job-board/sentry",
+      "status": 404,
+      "contentType": "text/plain",
+      "body": "Not Found"
+    }
+  ]
+}

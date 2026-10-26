@@ -113,11 +113,30 @@ export function expectArray(data, path, what = "") {
   throw new SourceError("format", `unexpected response${what ? ` from ${what}` : ""} (${keysOf(data)})`);
 }
 
+/**
+ * The JSON in an answer from client.request() ({ status, url, text }), or a
+ * format error that says what came back instead; a challenge page is blocked.
+ */
+export function parseJson({ status, url, text }) {
+  const raw = cleanJsonText(text);
+  try {
+    return JSON.parse(raw);
+  } catch {
+    if (isBlockedResponse(status, raw)) {
+      throw new SourceError("blocked", `a challenge page, not JSON, at ${shortUrl(url)}`, { status, url });
+    }
+    const kind = /^\s*</.test(raw) ? "HTML" : raw.trim() ? "text" : "an empty answer";
+    throw new SourceError("format", `returned ${kind}, not JSON (HTTP ${status}) at ${shortUrl(url)}`, { status, url });
+  }
+}
+
 const SAMPLE_BYTES = 2048;
 const MAX_SAMPLES = 12;
 // Response headers the report may show: never cookies
 const SAMPLE_HEADERS = ["content-type", "server", "retry-after", "cf-mitigated", "location", "x-robots-tag"];
 const RETRY_AFTER_MAX_S = 30;
+// A 429 that doesn't say how long is often a moment's throttle: waited out as a short Retry-After
+const RETRY_AFTER_DEFAULT_S = 5;
 const ROBOTS_DELAY_MAX_MS = 10000;
 
 const abortedError = (signal) =>
@@ -159,12 +178,14 @@ function retryAfterSeconds(value, now) {
  *     when larger, 1 s by default; different hosts run in parallel, up to 6
  *     requests in all;
  *   - one retry on a 5xx (not 503) or a network error; a 429 waits out
- *     Retry-After once when it is 30 s or less, and so does every request
- *     to that host; 403, 503 and a 429 that doesn't clear count as blocked;
+ *     Retry-After once when it is 30 s or less (5 s when it has none), and
+ *     so does every request to that host; 403, 503 and a 429 that doesn't
+ *     clear count as blocked;
  *   - a 2 KB sample of each URL path's answer is kept for the run report.
  * `scale` shortens every wait (tests); `fetch` replaces the network (tests).
  * client(meta, { signal }) gives one source its view: its gaps, its robots
- * rule ("obey" checks robots.txt before each request) and its samples.
+ * rule ("obey" checks robots.txt before each request), its request timeout
+ * (meta.timeoutMs, 20 s by default) and its samples.
  */
 export function createHttp({
   fetch: doFetch = (...args) => globalThis.fetch(...args),
@@ -238,8 +259,8 @@ export function createHttp({
   }
 
   /** One fetch with the request timeout and the source's signal. */
-  async function once(url, init, signal) {
-    const timeout = AbortSignal.timeout(timeoutMs);
+  async function once(url, init, signal, limitMs = timeoutMs) {
+    const timeout = AbortSignal.timeout(limitMs);
     const both = signal ? AbortSignal.any([signal, timeout]) : timeout;
     try {
       const res = await doFetch(url, { ...init, signal: both });
@@ -248,7 +269,7 @@ export function createHttp({
     } catch (err) {
       if (signal?.aborted) throw abortedError(signal);
       if (timeout.aborted) {
-        throw new SourceError("timeout", `no answer in ${Math.round(timeoutMs / 1000)} s at ${shortUrl(url)}`, { url });
+        throw new SourceError("timeout", `no answer in ${Math.round(limitMs / 1000)} s at ${shortUrl(url)}`, { url });
       }
       throw new SourceError("network", `network error at ${shortUrl(url)}: ${err?.message || err}`, { url });
     }
@@ -268,6 +289,8 @@ export function createHttp({
   function client(meta = {}, { signal } = {}) {
     const samples = new Map();
     let requests = 0;
+    // A source whose answers are large (Ashby's boards carry every posting) may wait longer
+    const limitMs = meta.timeoutMs || timeoutMs;
 
     function sample(url, method, res, text) {
       let key;
@@ -316,11 +339,11 @@ export function createHttp({
       const attempt = () =>
         onHost(u.host, gap, signal, async () => {
           requests += 1;
-          const out = await once(url, init, signal);
+          const out = await once(url, init, signal, limitMs);
           // A short Retry-After pauses the whole host, set before the next request in its queue starts
           if (out.res.status === 429) {
-            const wait = retryAfterSeconds(out.res.headers?.get?.("retry-after"), now);
-            if (wait != null && wait <= RETRY_AFTER_MAX_S) {
+            const wait = retryAfterSeconds(out.res.headers?.get?.("retry-after"), now) ?? RETRY_AFTER_DEFAULT_S;
+            if (wait <= RETRY_AFTER_MAX_S) {
               const state = hostState(u.host);
               state.pauseUntil = Math.max(state.pauseUntil, now() + wait * 1000 * scale);
               out.paused = true;
@@ -367,19 +390,7 @@ export function createHttp({
         ...opts,
         headers: { accept: "application/json", ...(opts.headers || {}) },
       });
-      const raw = cleanJsonText(res.text);
-      try {
-        return JSON.parse(raw);
-      } catch {
-        if (isBlockedResponse(res.status, raw)) {
-          throw new SourceError("blocked", `a challenge page, not JSON, at ${shortUrl(url)}`, { status: res.status, url });
-        }
-        const kind = /^\s*</.test(raw) ? "HTML" : raw.trim() ? "text" : "an empty answer";
-        throw new SourceError("format", `returned ${kind}, not JSON (HTTP ${res.status}) at ${shortUrl(url)}`, {
-          status: res.status,
-          url,
-        });
-      }
+      return parseJson(res);
     }
 
     /** The body as text (HTML, RSS); a challenge page counts as blocked. */

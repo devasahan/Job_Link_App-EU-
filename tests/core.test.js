@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import "./helpers/env.js";
 import { normalizeJob, DATE_PRESETS } from "../extension/scrapers/util.js";
 import { createContext, runSource } from "../extension/scrapers/core/context.js";
-import { checkLine, invariantHolds, leftOut, newReport, sourceLine } from "../extension/scrapers/core/diagnostics.js";
+import { checkLine, invariantHolds, leftOut, newReport, partLine, sourceLine } from "../extension/scrapers/core/diagnostics.js";
 import { createCache, memoryStorage } from "../extension/scrapers/core/cache.js";
 import { isAllowed, parseRobots, pathMatches } from "../extension/scrapers/core/robots.js";
 import { createHttp, SourceError } from "../extension/scrapers/http.js";
@@ -125,6 +125,46 @@ test("enough(), parts and what an error leaves", () => {
   assert.equal(r.parts.Beta.error, "HTTP 404 at boards.test/beta");
   assert.deepEqual(jobs.map((j) => j._part), ["Acme", "Acme"]);
   assert.ok(invariantHolds(r));
+});
+
+test("a part's key and note: on its Copy report line, not in the log, failing nothing", () => {
+  const logged = [];
+  const careers = createContext({ ...META, id: "ats", label: "ATS", group: "careers" }, { opts: OPTS, wanted: 1, onProgress: (m) => logged.push(m) });
+  const a = careers.ctx.part("Acme", { key: "acme-inc" });
+  a.note("2 jobs listed");
+  a.accept([job("a1")]);
+  careers.ctx.part("Gone", { key: "gone" }).note("not found (HTTP 404)");
+  careers.ctx.part("Broken", { key: "broken" }).fail(new Error("HTTP 500 at boards.test/broken"), { log: false });
+  const same = careers.ctx.part("same");
+  same.accept([job("s1", { title: "Accountant" })]);
+  const { report } = careers.finish();
+  assert.deepEqual(logged, []);
+  assert.equal(report.parts.Acme.key, "acme-inc");
+  assert.equal(partLine("Acme", report.parts.Acme), "Acme (acme-inc): 2 jobs listed, 1 scanned → 1 kept");
+  assert.equal(partLine("Gone", report.parts.Gone), "Gone (gone): not found (HTTP 404)");
+  assert.equal(partLine("Broken", report.parts.Broken), "Broken (broken): failed: HTTP 500 at boards.test/broken");
+  assert.equal(partLine("same", report.parts.same), "same: 1 scanned → 0 kept");
+  // Only the failure makes the source incomplete; its parts are companies
+  assert.equal(report.status, "incomplete");
+  assert.match(sourceLine(report), /^ATS: 2 scanned → 1 kept \(4 companies, 1 failed\)\. Left out: 1 not developer roles\. Stopped early: Broken: HTTP 500/);
+});
+
+test("a part's own failure (partial: false): on its line and in the company count, the source still complete", () => {
+  const logged = [];
+  const careers = createContext({ ...META, id: "ats", label: "ATS", group: "careers" }, { opts: OPTS, wanted: 1, onProgress: (m) => logged.push(m) });
+  careers.ctx.part("Acme", { key: "acme" }).accept([job("a1")]);
+  careers.ctx.part("Broken", { key: "broken" }).fail(new Error("HTTP 500 at boards.test/broken"), { partial: false });
+  const { report } = careers.finish();
+  assert.deepEqual(logged, ["ATS Broken: HTTP 500 at boards.test/broken"]);
+  assert.equal(report.status, "ok");
+  assert.deepEqual([report.failures, report.error, report.errorKind], [[], "", ""]);
+  assert.equal(partLine("Broken", report.parts.Broken), "Broken (broken): failed: HTTP 500 at boards.test/broken");
+  assert.equal(sourceLine(report), "ATS: 1 scanned → 1 kept (2 companies, 1 failed)");
+  assert.equal(checkLine({ ...report, ms: 2500 }), "ATS: OK · 1 scanned → 1 kept (2 companies, 1 failed) (2.5 s)");
+  // Without a part it is the source's, as before
+  const plain = ctxFor();
+  plain.ctx.fail(new Error("one query"), { partial: false });
+  assert.equal(plain.finish().report.status, "failed");
 });
 
 test("adopt takes a source's own counters (Indeed)", () => {
@@ -249,4 +289,13 @@ test("Copy report: lines, log, and samples only for sources that failed or kept 
   const check = reportText({ mode: "check", reports: [ok] });
   assert.match(check, /source check/);
   assert.match(check, /- Fine: OK · 3 scanned → 2 kept/);
+  assert.ok(!/by company/.test(text + check));
+  // A careers source: a line per company, in the list's order
+  const parts = {
+    GitLab: { scanned: 5, kept: 2, dropped: { title: 3 }, duplicates: 0, error: "", key: "gitlab", note: "9 jobs listed" },
+    Mozilla: { scanned: 0, kept: 0, dropped: {}, duplicates: 0, error: "", key: "mozilla", note: "not found (HTTP 404)" },
+  };
+  const careers = { ...newReport({ id: "greenhouse", label: "Greenhouse", group: "careers" }), status: "ok", scanned: 5, kept: 2, parts };
+  const withCompanies = reportText({ mode: "check", reports: [ok, careers] });
+  assert.match(withCompanies, /\n\nGreenhouse by company\n- GitLab \(gitlab\): 9 jobs listed, 5 scanned → 2 kept\n- Mozilla \(mozilla\): not found \(HTTP 404\)\n\nLog\n/);
 });

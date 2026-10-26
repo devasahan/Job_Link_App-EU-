@@ -1,0 +1,46 @@
+{
+  "id": 5012345010,
+  "internal_job_id": 1012345010,
+  "title": "Platform Engineer",
+  "updated_at": "{{ago:7h}}",
+  "requisition_id": "R-5010",
+  "location": {
+    "name": "Netherlands"
+  },
+  "absolute_url": "https://job-boards.greenhouse.io/grafanalabs/jobs/5012345010",
+  "language": "en",
+  "metadata": [
+    {
+      "id": 4011,
+      "name": "Workplace Type",
+      "value": "Remote",
+      "value_type": "single_select"
+    },
+    {
+      "id": 4012,
+      "name": "Employment Type",
+      "value": "Full-time",
+      "value_type": "single_select"
+    }
+  ],
+  "company_name": null,
+  "first_published": "{{ago:7h}}",
+  "content": "&lt;p&gt;Terraform and Kubernetes on our platform team.&lt;/p&gt;&lt;p&gt;Fully remote within the Netherlands.&lt;/p&gt;",
+  "departments": [
+    {
+      "id": 9001,
+      "name": "Engineering",
+      "child_ids": [],
+      "parent_id": null
+    }
+  ],
+  "offices": [
+    {
+      "id": 74,
+      "name": "Netherlands",
+      "location": "Netherlands",
+      "child_ids": [],
+      "parent_id": null
+    }
+  ]
+}
