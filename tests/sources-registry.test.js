@@ -33,6 +33,16 @@ test("every entry is complete and its id unique", () => {
     assert.ok(Array.isArray(s.hosts) && s.hosts.length, `${s.id}: hosts`);
     for (const host of Object.keys(s.gaps)) assert.ok(s.hosts.includes(host), `${s.id}: gap for ${host}, not in its hosts`);
     assert.ok(s.countries === null || s.countries.every((c) => CODES.has(c)), `${s.id}: countries`);
+    assert.ok(s.timeoutMs == null || (s.timeoutMs > 0 && s.timeoutMs <= 60e3), `${s.id}: timeoutMs`);
+    // A careers source checks a list of company boards
+    if (s.group === "careers") assert.ok(s.companies?.length && s.companies.every((c) => c.token && c.name), `${s.id}: companies`);
+  }
+});
+
+test("the company boards' API hosts are permitted, the EU Greenhouse host too", () => {
+  for (const host of ["boards-api.greenhouse.io", "boards-api.eu.greenhouse.io", "api.ashbyhq.com"]) {
+    assert.ok(permitted.has(host), host);
+    assert.ok(SOURCES.some((s) => s.group === "careers" && s.hosts.includes(host)), `${host} belongs to a careers source`);
   }
 });
 

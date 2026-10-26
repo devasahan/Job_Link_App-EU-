@@ -29,7 +29,7 @@
  */
 
 import { INDEED_SITES } from "./indeed.js";
-import { GREENHOUSE_BOARDS } from "./careers/companies.js";
+import { ASHBY_BOARDS, GREENHOUSE_BOARDS } from "./careers/companies.js";
 
 export const GROUPS = [
   { id: "boards", label: "Job boards", priority: 30, budgetMs: 120e3 },
@@ -143,6 +143,21 @@ export const SOURCES = [
     budgetMs: 300e3,
     gaps: { "boards-api.greenhouse.io": 300, "boards-api.eu.greenhouse.io": 300 },
     companies: GREENHOUSE_BOARDS,
+  },
+  {
+    id: "ashby",
+    label: "Ashby",
+    group: "careers",
+    hint: `${ASHBY_BOARDS.length} companies`,
+    url: "https://www.ashbyhq.com",
+    module: "./careers/ashby.js",
+    hosts: ["api.ashbyhq.com"],
+    defaultOn: true,
+    // One answer per company, with every posting in it: larger and slower than a list
+    budgetMs: 300e3,
+    gaps: { "api.ashbyhq.com": 500 },
+    timeoutMs: 30e3,
+    companies: ASHBY_BOARDS,
   },
 ].map(withDefaults);
 

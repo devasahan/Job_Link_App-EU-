@@ -29,7 +29,8 @@
     "https://euremotejobs.com/*",
     "https://arc.dev/*",
     "https://boards-api.greenhouse.io/*",
-    "https://boards-api.eu.greenhouse.io/*"
+    "https://boards-api.eu.greenhouse.io/*",
+    "https://api.ashbyhq.com/*"
   ],
   "declarative_net_request": {
     "rule_resources": [
