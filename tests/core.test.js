@@ -149,6 +149,24 @@ test("a part's key and note: on its Copy report line, not in the log, failing no
   assert.match(sourceLine(report), /^ATS: 2 scanned → 1 kept \(4 companies, 1 failed\)\. Left out: 1 not developer roles\. Stopped early: Broken: HTTP 500/);
 });
 
+test("a part's own failure (partial: false): on its line and in the company count, the source still complete", () => {
+  const logged = [];
+  const careers = createContext({ ...META, id: "ats", label: "ATS", group: "careers" }, { opts: OPTS, wanted: 1, onProgress: (m) => logged.push(m) });
+  careers.ctx.part("Acme", { key: "acme" }).accept([job("a1")]);
+  careers.ctx.part("Broken", { key: "broken" }).fail(new Error("HTTP 500 at boards.test/broken"), { partial: false });
+  const { report } = careers.finish();
+  assert.deepEqual(logged, ["ATS Broken: HTTP 500 at boards.test/broken"]);
+  assert.equal(report.status, "ok");
+  assert.deepEqual([report.failures, report.error, report.errorKind], [[], "", ""]);
+  assert.equal(partLine("Broken", report.parts.Broken), "Broken (broken): failed: HTTP 500 at boards.test/broken");
+  assert.equal(sourceLine(report), "ATS: 1 scanned → 1 kept (2 companies, 1 failed)");
+  assert.equal(checkLine({ ...report, ms: 2500 }), "ATS: OK · 1 scanned → 1 kept (2 companies, 1 failed) (2.5 s)");
+  // Without a part it is the source's, as before
+  const plain = ctxFor();
+  plain.ctx.fail(new Error("one query"), { partial: false });
+  assert.equal(plain.finish().report.status, "failed");
+});
+
 test("adopt takes a source's own counters (Indeed)", () => {
   const { ctx, finish } = ctxFor();
   ctx.adopt([job("x")], { scanned: 6, kept: 2, merged: 1, dropped: { title: 3, notRemote: 1 } });

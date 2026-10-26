@@ -135,6 +135,8 @@ const MAX_SAMPLES = 12;
 // Response headers the report may show: never cookies
 const SAMPLE_HEADERS = ["content-type", "server", "retry-after", "cf-mitigated", "location", "x-robots-tag"];
 const RETRY_AFTER_MAX_S = 30;
+// A 429 that doesn't say how long is often a moment's throttle: waited out as a short Retry-After
+const RETRY_AFTER_DEFAULT_S = 5;
 const ROBOTS_DELAY_MAX_MS = 10000;
 
 const abortedError = (signal) =>
@@ -176,8 +178,9 @@ function retryAfterSeconds(value, now) {
  *     when larger, 1 s by default; different hosts run in parallel, up to 6
  *     requests in all;
  *   - one retry on a 5xx (not 503) or a network error; a 429 waits out
- *     Retry-After once when it is 30 s or less, and so does every request
- *     to that host; 403, 503 and a 429 that doesn't clear count as blocked;
+ *     Retry-After once when it is 30 s or less (5 s when it has none), and
+ *     so does every request to that host; 403, 503 and a 429 that doesn't
+ *     clear count as blocked;
  *   - a 2 KB sample of each URL path's answer is kept for the run report.
  * `scale` shortens every wait (tests); `fetch` replaces the network (tests).
  * client(meta, { signal }) gives one source its view: its gaps, its robots
@@ -339,8 +342,8 @@ export function createHttp({
           const out = await once(url, init, signal, limitMs);
           // A short Retry-After pauses the whole host, set before the next request in its queue starts
           if (out.res.status === 429) {
-            const wait = retryAfterSeconds(out.res.headers?.get?.("retry-after"), now);
-            if (wait != null && wait <= RETRY_AFTER_MAX_S) {
+            const wait = retryAfterSeconds(out.res.headers?.get?.("retry-after"), now) ?? RETRY_AFTER_DEFAULT_S;
+            if (wait <= RETRY_AFTER_MAX_S) {
               const state = hostState(u.host);
               state.pauseUntil = Math.max(state.pauseUntil, now() + wait * 1000 * scale);
               out.paused = true;

@@ -428,6 +428,7 @@ const RUN_LINES = {
     const lists = state.asked.filter((u) => /boards-api\.greenhouse\.io\/v1\/boards\/[^/]+\/jobs$/.test(u));
     const postings = state.asked.filter((u) => /boards-api\.(?:eu\.)?greenhouse\.io\/v1\/boards\/[^/]+\/jobs\/\d+$/.test(u));
     check(lists.length === 85 && postings.length <= 4, `Greenhouse: every board listed (${lists.length}), ${postings.length} postings read`, postings.join("\n"));
+    check(/ kept \(85 companies\) \(/.test(line(run.lines, "greenhouse").text) && / kept \(84 companies\) \(/.test(line(run.lines, "ashby").text), "the check lines count the companies");
     check(/^Himalayas: FAILED · HTTP 500 at himalayas\.app\/jobs\/api\/search/.test(line(run.lines, "himalayas").text), "Himalayas FAILED", line(run.lines, "himalayas").text);
     check(/Each source: up to 3 jobs from the last 7 days/.test(run.log), "the log says what a check does");
     check(state.indeed.length > 0 && state.asked.some((u) => /^https:\/\/arc\.dev\/remote-jobs/.test(u)), "Indeed and Arc.dev were asked although unticked");
@@ -478,8 +479,9 @@ const RUN_LINES = {
     // Proton's board is in Greenhouse's EU region: asked there after the main host's 404, its postings too
     const proton = state.asked.filter((u) => /\/boards\/proton\//.test(u)).map((u) => new URL(u).host);
     check(proton[0] === "boards-api.greenhouse.io" && proton.slice(1).every((h) => h === "boards-api.eu.greenhouse.io") && proton.length === 4, `Proton: the main host, then the EU host: ${proton.join(" ")}`);
-    const postings = state.asked.filter((u) => /\/v1\/boards\/grafanalabs\/jobs\/\d+$/.test(u)).map((u) => u.split("/").pop());
-    check(postings.join(",") === "5012345001,5012345002,5012345004,5012345008,5012345010", `Grafana Labs: only the postings that passed the screen are read: ${postings.join(",")}`);
+    // Grafana Labs has 5 jobs that pass the screen: its board once more with every posting, not 5 requests
+    const grafana = state.asked.filter((u) => /\/v1\/boards\/grafanalabs\/jobs/.test(u)).map((u) => u.split("/grafanalabs/jobs")[1] || "list");
+    check(grafana.join(" ") === "list ?content=true", `Grafana Labs: its list, then every posting in one answer: ${grafana.join(" ")}`);
     const { rows } = readSheet(run.file);
     console.log("rows:", JSON.stringify(rows.map((r) => [r.Title, r.Company, r.Site, r.Country || "", r["Open to"]])));
     check(rows.length === 11 && run.merge === "0 duplicates merged, 0 already downloaded", `11 rows (Greenhouse 6 + Ashby 5): ${rows.length}, ${run.merge}`);

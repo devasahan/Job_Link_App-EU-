@@ -167,12 +167,15 @@ export function createContext(meta, { opts, wanted, signal, http, cache, onProgr
   };
   /**
    * Part of the source failed (one query, one country, one company); the rest
-   * goes on. `log: false` when the adapter already said so.
+   * goes on, and the source ends "stopped early". `log: false` when the
+   * adapter already said so; `partial: false` when the part's failure is its
+   * own (one company's board): it shows on the part's line, and the source
+   * still ends complete.
    */
-  const fail = (err, partName = "", { log = true } = {}) => {
+  const fail = (err, partName = "", { log = true, partial = true } = {}) => {
     const text = message(err);
     if (partName) counters(partName).error = text;
-    report.failures.push(partName ? `${partName}: ${text}` : text);
+    if (partial || !partName) report.failures.push(partName ? `${partName}: ${text}` : text);
     if (log) progress(`${report.label}${partName ? ` ${partName}` : ""}: ${text}`);
   };
   const aborted = () => closed || Boolean(signal?.aborted);

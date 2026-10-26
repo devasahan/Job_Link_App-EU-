@@ -143,9 +143,11 @@ const listNames = (companies, max = 12) =>
  *   - boards not found are summed up in one log line, not a failure; none
  *     found at all is one (the API itself has moved);
  *   - a stop, a block or a host that stopped answering ends the source
- *     (companyGuard);
- *   - any other error fails that company only, unless no company answered:
- *     then the first error is the source's (500 → failed, as for any source).
+ *     (companyGuard); the companies not reached are named in the log;
+ *   - any other error fails that company only (its Copy report line and the
+ *     log say so; the source isn't "stopped early" for it, every company was
+ *     asked), unless no company answered: then the first error is the
+ *     source's (500 → failed, as for any source).
  * Returns { answered, missing }.
  */
 export async function runCompanies(ctx, companies, readBoard) {
@@ -171,13 +173,18 @@ export async function runCompanies(ctx, companies, readBoard) {
         answered += 1;
         part.note(`${listed} ${listed === 1 ? "job" : "jobs"} listed`);
       } catch (err) {
+        // Cut short while this board was read: not an empty board
+        if (err?.kind === "aborted") part.note("stopped while being read");
         guard.check(err);
         first ||= err;
-        part.fail(err);
+        part.fail(err, { partial: false });
       }
     }
   } finally {
-    if (done < companies.length) ctx.note(`${label}: ${companies.length - done} of ${companies.length} companies not checked (stopped first)`);
+    if (done < companies.length) {
+      const rest = companies.slice(done);
+      ctx.note(`${label}: ${rest.length} of ${companies.length} companies not checked (stopped first): ${listNames(rest)}`);
+    }
     if (missing.length) {
       ctx.note(`${label}: ${missing.length} ${missing.length === 1 ? "company" : "companies"} not found (HTTP 404): ${listNames(missing)}`);
     }

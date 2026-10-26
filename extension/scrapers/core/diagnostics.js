@@ -123,7 +123,11 @@ export function sourceLine(report) {
   return `${label}: ${counts}${stopped}`;
 }
 
-/** Check sources mode: does the source answer, and with jobs? */
+/**
+ * Check sources mode: does the source answer, and with jobs? A careers
+ * source counts its companies, and those that failed:
+ *   "Greenhouse: OK · 13 scanned → 6 kept (85 companies, 2 failed) (27.0 s)"
+ */
 export function checkLine(report) {
   const label = report.label || report.id;
   const secs = report.ms ? ` (${(report.ms / 1000).toFixed(1)} s)` : "";
@@ -131,7 +135,7 @@ export function checkLine(report) {
   if (report.status === "failed") return `${label}: FAILED · ${report.error || "no answer"}${secs}`;
   if (!report.scanned) return `${label}: answered, but no jobs in the last 7 days${secs}`;
   const partial = report.status === "incomplete" ? ` · stopped early: ${report.error}` : "";
-  return `${label}: OK · ${report.scanned} scanned → ${report.kept} kept${partial}${secs}`;
+  return `${label}: OK · ${report.scanned} scanned → ${report.kept} kept${partsText(report)}${partial}${secs}`;
 }
 
 /** Did the source fail or keep nothing? Its response samples go into Copy report. */

@@ -139,7 +139,8 @@ export const SOURCES = [
     // The EU host only for boards the main one doesn't know
     hosts: ["boards-api.greenhouse.io", "boards-api.eu.greenhouse.io"],
     defaultOn: true,
-    // ~85 board lists plus the postings that pass their screen
+    // ~85 board lists, then the postings that pass their screen: one or two read alone, or the board
+    // once more with every posting; the default 20 s timeout, so a host that hangs is soon given up
     budgetMs: 300e3,
     gaps: { "boards-api.greenhouse.io": 300, "boards-api.eu.greenhouse.io": 300 },
     companies: GREENHOUSE_BOARDS,

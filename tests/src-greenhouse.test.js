@@ -4,13 +4,16 @@ import { adapterContract, runFixture } from "./helpers/contract.js";
 import { sourceById } from "../extension/scrapers/sources.js";
 import { GREENHOUSE_BOARDS } from "../extension/scrapers/careers/companies.js";
 import { toJob } from "../extension/scrapers/careers/greenhouse.js";
-import { reportText } from "../extension/scrapers/core/diagnostics.js";
+import { checkLine, reportText, sourceLine } from "../extension/scrapers/core/diagnostics.js";
+import { SourceError } from "../extension/scrapers/http.js";
 
 // Three companies: one on the main host, one in the EU region, one gone (404 on both)
 const company = (token) => GREENHOUSE_BOARDS.find((c) => c.token === token);
 const COMPANIES = ["grafanalabs", "proton", "mozilla"].map(company);
 const meta = { ...sourceById("greenhouse"), companies: COMPANIES };
 const isPosting = (url) => /\/jobs\/\d+$/.test(new URL(url).pathname);
+// The board read once more with every posting
+const isFull = (url) => new URL(url).searchParams.get("content") === "true";
 
 adapterContract({
   id: "greenhouse",
@@ -40,7 +43,7 @@ test("a board neither host knows is a note, not a failure; the EU host is asked 
   assert.equal(report.status, "ok");
   assert.deepEqual(report.failures, []);
   assert.deepEqual(report.notes, ["Greenhouse: 1 company not found (HTTP 404): Mozilla (mozilla)"]);
-  const lists = calls.filter((c) => !isPosting(c.url)).map((c) => `${c.host} ${c.status}`);
+  const lists = calls.filter((c) => !isPosting(c.url) && !isFull(c.url)).map((c) => `${c.host} ${c.status}`);
   assert.deepEqual(lists, [
     "boards-api.greenhouse.io 200",
     "boards-api.greenhouse.io 404",
@@ -58,20 +61,29 @@ test("a board neither host knows is a note, not a failure; the EU host is asked 
   assert.match(gone.report.error, /no company board found \(HTTP 404 for all 1\)/);
 });
 
-test("postings are read only for the rows that pass the screen, newest first", async () => {
-  const { calls } = await runFixture({ id: "greenhouse", meta });
-  const read = calls.filter((c) => isPosting(c.url)).map((c) => new URL(c.url).pathname.split("/").pop());
-  // Passed: 1 (2h), 2 (3h), 4 (5h), 8 (6h), 10 (7h); Proton's 1 (8h), 3 (9h). Not the office, US-only, old, hybrid or non-developer rows
-  assert.deepEqual(read, ["5012345001", "5012345002", "5012345004", "5012345008", "5012345010", "4512345101", "4512345103"]);
+test("postings are checked only for the rows that pass the screen, newest first: one or two alone, more in one answer", async () => {
+  const read = (calls) => calls.filter((c) => isPosting(c.url) || isFull(c.url)).map((c) => (isFull(c.url) ? `${c.url.split("/")[5]}: all` : c.url.split("/").pop()));
+  // Passed: Grafana's 1 (2h), 2 (3h), 4 (5h), 8 (6h), 10 (7h): its board once more with every posting;
+  // Proton's 1 (8h), 3 (9h): read one by one. Not the office, US-only, old, hybrid or non-developer rows
+  const { calls, jobs } = await runFixture({ id: "greenhouse", meta });
+  assert.deepEqual(read(calls), ["grafanalabs: all", "4512345101", "4512345103"]);
+  assert.equal(jobs.find((j) => j.title === "Backend Developer").open_to, "Europe");
+  // Count 1: the newest posting alone
+  const one = await runFixture({ id: "greenhouse", meta, wanted: 1 });
+  assert.deepEqual(read(one.calls), ["5012345001", "4512345101"]);
+  // Two read alone and one left out on its posting (you must live in Spain): the rest in one answer
+  const fi = await runFixture({ id: "greenhouse", meta, wanted: 2, opts: { home: "FI" } });
+  assert.deepEqual(read(fi.calls), ["5012345001", "5012345002", "grafanalabs: all", "4512345101", "4512345103"]);
+  assert.deepEqual(fi.jobs.filter((j) => j.company === "Grafana Labs").map((j) => j.title), ["Senior Backend Engineer", "Backend Developer"]);
   // You live in Spain: "Spain (Remote)" is in your country, its posting isn't read
-  const es = await runFixture({ id: "greenhouse", meta, opts: { home: "ES" } });
+  const es = await runFixture({ id: "greenhouse", meta, wanted: 1, opts: { home: "ES" } });
   assert.ok(!es.calls.some((c) => /5012345002$/.test(c.url)));
   assert.ok(!es.jobs.some((j) => j.title === "Software Engineer, Frontend"));
   assert.equal(es.report.parts["Grafana Labs"].dropped.inHome, 1);
   // Check sources: every board is listed, a few postings read
   const check = await runFixture({ id: "greenhouse", meta, wanted: 1, opts: { check: true } });
-  assert.equal(check.calls.filter((c) => isPosting(c.url)).length, 1);
-  assert.equal(check.calls.filter((c) => !isPosting(c.url)).length, 5);
+  assert.equal(check.calls.filter((c) => isPosting(c.url) || isFull(c.url)).length, 1);
+  assert.equal(check.calls.filter((c) => !isPosting(c.url) && !isFull(c.url)).length, 5);
 });
 
 test("You live in Finland or Sweden: listed elsewhere stays unless the posting says you must live there", async () => {
@@ -124,29 +136,47 @@ test("a job: the posting's HTML unescaped once, the custom fields, the dates and
 });
 
 test("failures stay with their company; a block or a host that stopped answering ends the source", async () => {
-  // One board's error: that company failed, the others kept, the source incomplete
+  // One board's error: that company failed, on its line and the source's; every company was asked,
+  // so the source didn't stop early
   const one = await runFixture({ id: "greenhouse", meta, respond: (call) => (/\/proton\/jobs$/.test(call.url) ? { status: 500, body: "oops" } : null) });
-  assert.equal(one.report.status, "incomplete");
+  assert.equal(one.report.status, "ok");
+  assert.deepEqual(one.report.failures, []);
   assert.equal(one.report.parts.Proton.error, "HTTP 500 at boards-api.greenhouse.io/v1/boards/proton/jobs");
   assert.equal(one.report.parts["Grafana Labs"].kept, 4);
   assert.match(reportText({ reports: [one.report] }), /- Proton \(proton\): failed: HTTP 500 at boards-api\.greenhouse\.io\/v1\/boards\/proton\/jobs\n/);
-  // A 429 that doesn't clear: the companies after it aren't asked
+  assert.match(sourceLine(one.report), /^Greenhouse: 10 scanned → 4 kept \(3 companies, 1 failed\)\. Left out: [^.]+$/);
+  assert.match(checkLine(one.report), /^Greenhouse: OK · 10 scanned → 4 kept \(3 companies, 1 failed\) \(/);
+  // A 429 that doesn't clear after its wait: the companies after it aren't asked, and are named
   const limited = await runFixture({ id: "greenhouse", meta, respond: (call) => (/\/proton\/jobs$/.test(call.url) ? { status: 429, body: "Too Many Requests" } : null) });
   assert.equal(limited.report.status, "incomplete");
   assert.equal(limited.report.errorKind, "blocked");
   assert.equal(limited.report.parts["Grafana Labs"].kept, 4);
-  const blockedAt = limited.calls.findIndex((c) => c.status === 429);
-  assert.equal(limited.calls.length, blockedAt + 1, "nothing asked after the block");
-  assert.ok(limited.report.notes.includes("Greenhouse: 1 of 3 companies not checked (stopped first)"));
+  assert.equal(limited.calls.filter((c) => c.status === 429).length, 2, "waited, asked once more");
+  assert.equal(limited.calls.at(-1).status, 429, "nothing asked after the block");
+  assert.ok(limited.report.notes.includes("Greenhouse: 1 of 3 companies not checked (stopped first): Mozilla (mozilla)"), limited.report.notes.join("\n"));
+  // A 429 without Retry-After that clears after a short wait: nothing lost
+  let first = true;
+  const throttled = await runFixture({
+    id: "greenhouse",
+    meta,
+    respond: (call) => {
+      if (!first || !/\/grafanalabs\/jobs$/.test(call.url)) return null;
+      first = false;
+      return { status: 429, body: "Too Many Requests" };
+    },
+  });
+  assert.equal(throttled.report.status, "ok");
+  assert.deepEqual([throttled.report.parts["Grafana Labs"].kept, throttled.report.parts.Proton.kept], [4, 2]);
   // A 403 may be one company's board: the others go on; a second in a row is the host's
   const refused = await runFixture({ id: "greenhouse", meta, respond: (call) => (/\/grafanalabs\/jobs$/.test(call.url) ? { status: 403, body: "Forbidden" } : null) });
-  assert.equal(refused.report.status, "incomplete");
+  assert.equal(refused.report.status, "ok");
   assert.match(refused.report.parts["Grafana Labs"].error, /HTTP 403 \(blocked\)/);
   assert.equal(refused.report.parts.Proton.kept, 2);
   const twice = await runFixture({ id: "greenhouse", meta, respond: (call) => (/\/(?:grafanalabs|proton)\/jobs$/.test(call.url) ? { status: 403, body: "Forbidden" } : null) });
   assert.equal(twice.report.errorKind, "blocked");
   assert.ok(!twice.calls.some((c) => /\/mozilla\//.test(c.url)));
-  // The EU host failing is the company's "not found", not a failure
+  // The EU host failing is the company's "not found", not a failure; once it doesn't answer it
+  // isn't asked again this run
   const euDown = await runFixture({
     id: "greenhouse",
     meta,
@@ -158,11 +188,28 @@ test("failures stay with their company; a block or a host that stopped answering
   assert.equal(euDown.report.status, "ok");
   assert.deepEqual([euDown.report.parts.Proton.note, euDown.report.parts.Mozilla.note], ["not found (HTTP 404)", "not found (HTTP 404)"]);
   assert.equal(euDown.report.parts["Grafana Labs"].kept, 4);
-  // A posting gone since its board was listed: skipped, nothing failed
-  const closed = await runFixture({ id: "greenhouse", meta, respond: (call) => (/\/5012345001$/.test(call.url) ? { status: 404, body: '{"status":404,"error":"Job not found"}' } : null) });
+  assert.deepEqual(euDown.calls.filter((c) => c.host === "boards-api.eu.greenhouse.io").map((c) => c.url.split("/")[5]), ["proton", "proton"]);
+  assert.ok(euDown.report.notes.some((n) => /^Greenhouse: the EU host isn't answering \(network error at boards-api\.eu\.greenhouse\.io\/v1\/boards\/proton\/jobs: .*\): boards kept only there count as not found this run$/.test(n)), euDown.report.notes.join("\n"));
+  // One that hangs costs its timeout once, not for every board the main host doesn't know
+  const stale = ["gitlab", "canonical", "elastic", "wikimedia", "grafanalabs"].map(company);
+  const hang = await runFixture({
+    id: "greenhouse",
+    meta: { ...meta, companies: stale, timeoutMs: 100 },
+    respond: (call) => (call.host === "boards-api.eu.greenhouse.io" ? { delay: 60e3 } : null),
+  });
+  assert.equal(hang.report.status, "ok");
+  assert.equal(hang.calls.filter((c) => c.host === "boards-api.eu.greenhouse.io").length, 2);
+  assert.ok(hang.ms < 2000, `${hang.ms} ms`);
+  assert.equal(hang.report.parts["Grafana Labs"].kept, 4);
+  // A posting gone since its board was listed (a 404 on its own, missing from the full board): skipped, nothing failed
+  const closed = await runFixture({ id: "greenhouse", meta, wanted: 1, respond: (call) => (/\/5012345001$/.test(call.url) ? { status: 404, body: '{"status":404,"error":"Job not found"}' } : null) });
   assert.equal(closed.report.status, "ok");
-  assert.ok(!closed.jobs.some((j) => j.title === "Senior Backend Engineer"));
-  assert.equal(closed.report.parts["Grafana Labs"].kept, 3);
+  assert.deepEqual(closed.jobs.filter((j) => j.company === "Grafana Labs").map((j) => j.title), ["Software Engineer, Frontend"]);
+  const without = (body, id) => JSON.stringify({ ...JSON.parse(body), jobs: JSON.parse(body).jobs.filter((j) => j.id !== id) });
+  const gone = await runFixture({ id: "greenhouse", meta, respond: (call, route) => (isFull(call.url) ? { body: without(route.body, 5012345001), contentType: "application/json" } : null) });
+  assert.equal(gone.report.status, "ok");
+  assert.ok(!gone.jobs.some((j) => j.title === "Senior Backend Engineer"));
+  assert.equal(gone.report.parts["Grafana Labs"].kept, 3);
   // No answer from three companies in a row: the host is down
   const many = { ...meta, companies: GREENHOUSE_BOARDS.slice(0, 6) };
   const down = await runFixture({
@@ -175,4 +222,21 @@ test("failures stay with their company; a block or a host that stopped answering
   assert.equal(down.report.status, "failed");
   assert.equal(down.report.errorKind, "network");
   assert.equal(new Set(down.calls.map((c) => c.url)).size, 3);
+});
+
+test("stopped partway: the company being read says so, and the companies not reached are named", async () => {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(new SourceError("aborted", "time budget (300 s) used up")), 150);
+  const { report } = await runFixture({
+    id: "greenhouse",
+    meta,
+    signal: controller.signal,
+    respond: (call) => (/\/proton\/jobs$/.test(call.url) ? { delay: 5000 } : null),
+  });
+  assert.equal(report.error, "time budget (300 s) used up");
+  assert.equal(report.parts.Proton.note, "stopped while being read");
+  const text = reportText({ reports: [report] });
+  assert.match(text, /\n- Proton \(proton\): stopped while being read\n/);
+  assert.match(text, /\n- Grafana Labs \(grafanalabs\): 10 jobs listed, 10 scanned → 4 kept\n/);
+  assert.ok(report.notes.includes("Greenhouse: 1 of 3 companies not checked (stopped first): Mozilla (mozilla)"), report.notes.join("\n"));
 });

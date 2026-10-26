@@ -110,7 +110,7 @@ test("a server error or a network error is retried once", async () => {
   assert.equal(offline.calls.length, 2);
 });
 
-test("403 and 503 are blocked at once; a 429 waits out a short Retry-After once", async () => {
+test("403 and 503 are blocked at once; a 429 waits out a short Retry-After (5 s without one) once", async () => {
   for (const status of [403, 503]) {
     const { fetch, calls } = fakeFetch(() => ({ status, body: "<html>no</html>" }));
     const client = createHttp({ fetch, scale: 0.01, cache: memCache() }).client(meta());
@@ -121,16 +121,24 @@ test("403 and 503 are blocked at once; a 429 waits out a short Retry-After once"
   const t0 = Date.now();
   assert.deepEqual(await createHttp({ fetch: once.fetch, scale: 0.01, cache: memCache() }).client(meta()).json("https://x.test/p"), { a: 1 });
   assert.ok(Date.now() - t0 >= 18);
-  // Too long, missing, or a second 429: blocked
-  for (const headers of [{ "retry-after": "120" }, {}]) {
-    const { fetch, calls } = fakeFetch(() => ({ status: 429, headers }));
-    const client = createHttp({ fetch, scale: 0.01, cache: memCache() }).client(meta());
-    await assert.rejects(client.json("https://x.test/p"), (err) => err.kind === "blocked" && /429 \(rate-limited\)/.test(err.message));
-    assert.equal(calls.length, 1);
+  // Too long: blocked at once
+  const long = fakeFetch(() => ({ status: 429, headers: { "retry-after": "120" } }));
+  await assert.rejects(
+    createHttp({ fetch: long.fetch, scale: 0.01, cache: memCache() }).client(meta()).json("https://x.test/p"),
+    (err) => err.kind === "blocked" && /429 \(rate-limited\)/.test(err.message)
+  );
+  assert.equal(long.calls.length, 1);
+  // None: a moment's throttle, waited out as 5 s (50 ms here)
+  const bare = fakeFetch((url, n) => (n === 1 ? { status: 429 } : { body: { b: 1 } }));
+  const t1 = Date.now();
+  assert.deepEqual(await createHttp({ fetch: bare.fetch, scale: 0.01, cache: memCache() }).client(meta()).json("https://x.test/p"), { b: 1 });
+  assert.ok(Date.now() - t1 >= 45, `${Date.now() - t1} ms`);
+  // A second 429, with or without Retry-After: blocked
+  for (const headers of [{ "retry-after": "1" }, {}]) {
+    const twice = fakeFetch(() => ({ status: 429, headers }));
+    await assert.rejects(createHttp({ fetch: twice.fetch, scale: 0.01, cache: memCache() }).client(meta()).json("https://x.test/p"), (err) => err.kind === "blocked" && /429/.test(err.message));
+    assert.equal(twice.calls.length, 2);
   }
-  const twice = fakeFetch(() => ({ status: 429, headers: { "retry-after": "1" } }));
-  await assert.rejects(createHttp({ fetch: twice.fetch, scale: 0.01, cache: memCache() }).client(meta()).json("https://x.test/p"), /429/);
-  assert.equal(twice.calls.length, 2);
 });
 
 test("a 429's Retry-After pauses its whole host, not only the request that got it", async () => {
