@@ -176,6 +176,8 @@ export async function scrapeJobs({
     preset,
     years: check ? "" : years,
     jobType: type,
+    // A source with many parts (careers) still asks each one, but reads only a few postings
+    check,
   };
 
   const net = http || createHttp({ cache });

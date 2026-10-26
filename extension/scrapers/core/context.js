@@ -27,7 +27,8 @@ const message = (err) => err?.message || String(err);
  * @param {object} meta  the source's registry entry (sources.js)
  * @param {{ opts: object, wanted: number, signal?: AbortSignal, http?: object, cache?: object,
  *           onProgress?: (msg: string) => void, now?: () => number }} env
- * opts: { title, stack, countries, abroad, home, preset: { hoursOld, span }, years, jobType }
+ * opts: { title, stack, countries, abroad, home, preset: { hoursOld, span }, years, jobType, check }
+ * (check: a Check sources run, which only needs to see that the source answers)
  */
 export function createContext(meta, { opts, wanted, signal, http, cache, onProgress, now = Date.now }) {
   const preset = opts.preset || {};
@@ -70,7 +71,7 @@ export function createContext(meta, { opts, wanted, signal, http, cache, onProgr
   const idOf = (job) => String(job._id || job.job_url || `${job.title}|${job.company}`);
   const counters = (name) => {
     if (!name) return null;
-    if (!report.parts[name]) report.parts[name] = { scanned: 0, kept: 0, dropped: {}, duplicates: 0, error: "" };
+    if (!report.parts[name]) report.parts[name] = { scanned: 0, kept: 0, dropped: {}, duplicates: 0, error: "", key: "", note: "" };
     return report.parts[name];
   };
   const drop = (part, reason) => {
@@ -193,17 +194,24 @@ export function createContext(meta, { opts, wanted, signal, http, cache, onProgr
     enough: () => aborted() || (!usedParts && report.kept >= wanted),
     /**
      * One part of a source that counts as its own source for Count (each
-     * company of the careers source): the same calls, counted under its name.
+     * company of a careers source): the same calls, counted under its name.
+     * `key` (a company's board token) is shown beside the name in Copy
+     * report; the part's note(msg) ("40 jobs listed", "not found (HTTP 404)")
+     * goes on that line only, not into the log, and fails nothing.
      */
-    part(name) {
+    part(name, { key = "" } = {}) {
       usedParts = true;
-      counters(name);
+      const own = counters(name);
+      if (key) own.key = String(key);
       return {
         ...ctx,
         screen: (rows) => screen(rows, name),
         accept: (jobs) => accept(jobs, name),
         fail: (err, how) => fail(err, name, how),
-        enough: () => aborted() || report.parts[name].kept >= wanted,
+        note: (msg) => {
+          if (!closed) own.note = String(msg || "");
+        },
+        enough: () => aborted() || own.kept >= wanted,
       };
     },
   };

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import "./helpers/env.js";
-import { createHttp, expectArray, SourceError } from "../extension/scrapers/http.js";
+import { createHttp, expectArray, parseJson, SourceError } from "../extension/scrapers/http.js";
 import { createCache, memoryStorage } from "../extension/scrapers/core/cache.js";
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -209,6 +209,19 @@ test("a request with no answer times out (and is retried once)", async () => {
   const client = createHttp({ fetch, timeoutMs: 30, scale: 0.01, cache: memCache() }).client(meta());
   await assert.rejects(client.json("https://x.test/a"), (err) => err.kind === "timeout" && /no answer in 0 s/.test(err.message));
   assert.equal(calls.length, 2);
+});
+
+test("a source may wait longer for its answers (meta.timeoutMs)", async () => {
+  const { fetch } = fakeFetch(() => ({ body: { ok: 1 }, delay: 60 }));
+  const http = createHttp({ fetch, timeoutMs: 20, scale: 0.01, cache: memCache() });
+  await assert.rejects(http.client(meta()).json("https://x.test/a"), (err) => err.kind === "timeout");
+  assert.deepEqual(await http.client(meta({ timeoutMs: 1000 })).json("https://x.test/b"), { ok: 1 });
+});
+
+test("parseJson reads an answer from request(), saying what came back instead", () => {
+  assert.deepEqual(parseJson({ status: 200, url: "https://x.test/a", text: '{"jobs":[]}' }), { jobs: [] });
+  assert.throws(() => parseJson({ status: 200, url: "https://x.test/a", text: "<html><body>Hi</body></html>" }), (err) => err.kind === "format" && /returned HTML, not JSON \(HTTP 200\) at x\.test\/a/.test(err.message));
+  assert.throws(() => parseJson({ status: 200, url: "https://x.test/a", text: "<html><title>Just a moment...</title></html>" }), (err) => err.kind === "blocked");
 });
 
 test('"obey" sources check robots.txt (once per host) and take its Crawl-delay', async () => {
