@@ -1,0 +1,79 @@
+{
+  "comments": "Proton's board is in Greenhouse's EU region: the main host says 404, boards-api.eu.greenhouse.io answers. 1 Remote - Europe; 2 an office; 3 Remote, Germany, a board without first_published (updated_at stands in).",
+  "jobs": [
+    {
+      "id": 4512345101,
+      "internal_job_id": 512345101,
+      "title": "Backend Software Engineer",
+      "updated_at": "{{ago:8h}}",
+      "requisition_id": "R-5101",
+      "location": {
+        "name": "Remote - Europe"
+      },
+      "absolute_url": "https://job-boards.eu.greenhouse.io/proton/jobs/4512345101",
+      "language": "en",
+      "metadata": null,
+      "data_compliance": [
+        {
+          "type": "gdpr",
+          "requires_consent": false,
+          "requires_processing_consent": false,
+          "requires_retention_consent": false,
+          "retention_period": null
+        }
+      ],
+      "company_name": null,
+      "first_published": "{{ago:8h}}"
+    },
+    {
+      "id": 4512345102,
+      "internal_job_id": 512345102,
+      "title": "Senior Frontend Engineer",
+      "updated_at": "{{ago:2h}}",
+      "requisition_id": "R-5102",
+      "location": {
+        "name": "Geneva, Switzerland"
+      },
+      "absolute_url": "https://job-boards.eu.greenhouse.io/proton/jobs/4512345102",
+      "language": "en",
+      "metadata": null,
+      "data_compliance": [
+        {
+          "type": "gdpr",
+          "requires_consent": false,
+          "requires_processing_consent": false,
+          "requires_retention_consent": false,
+          "retention_period": null
+        }
+      ],
+      "company_name": null,
+      "first_published": "{{ago:2h}}"
+    },
+    {
+      "id": 4512345103,
+      "internal_job_id": 512345103,
+      "title": "Mobile Developer (Android)",
+      "updated_at": "{{ago:9h}}",
+      "requisition_id": "R-5103",
+      "location": {
+        "name": "Remote, Germany"
+      },
+      "absolute_url": "https://job-boards.eu.greenhouse.io/proton/jobs/4512345103",
+      "language": "en",
+      "metadata": null,
+      "data_compliance": [
+        {
+          "type": "gdpr",
+          "requires_consent": false,
+          "requires_processing_consent": false,
+          "requires_retention_consent": false,
+          "retention_period": null
+        }
+      ],
+      "company_name": null
+    }
+  ],
+  "meta": {
+    "total": 3
+  }
+}

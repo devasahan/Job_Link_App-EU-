@@ -27,7 +27,9 @@
     "https://jobicy.com/*",
     "https://hn.algolia.com/*",
     "https://euremotejobs.com/*",
-    "https://arc.dev/*"
+    "https://arc.dev/*",
+    "https://boards-api.greenhouse.io/*",
+    "https://boards-api.eu.greenhouse.io/*"
   ],
   "declarative_net_request": {
     "rule_resources": [

@@ -1,0 +1,32 @@
+{
+  "id": 4512345103,
+  "internal_job_id": 512345103,
+  "title": "Mobile Developer (Android)",
+  "updated_at": "{{ago:9h}}",
+  "requisition_id": "R-5103",
+  "location": {
+    "name": "Remote, Germany"
+  },
+  "absolute_url": "https://job-boards.eu.greenhouse.io/proton/jobs/4512345103",
+  "language": "en",
+  "metadata": null,
+  "company_name": null,
+  "content": "&lt;p&gt;Kotlin and Jetpack Compose.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;2+ years of experience&lt;/li&gt;&lt;/ul&gt;",
+  "departments": [
+    {
+      "id": 9001,
+      "name": "Engineering",
+      "child_ids": [],
+      "parent_id": null
+    }
+  ],
+  "offices": [
+    {
+      "id": 82,
+      "name": "Germany",
+      "location": "Germany",
+      "child_ids": [],
+      "parent_id": null
+    }
+  ]
+}

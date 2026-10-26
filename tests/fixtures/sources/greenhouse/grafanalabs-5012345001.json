@@ -1,0 +1,33 @@
+{
+  "id": 5012345001,
+  "internal_job_id": 1012345001,
+  "title": "Senior Backend Engineer",
+  "updated_at": "{{ago:2h}}",
+  "requisition_id": "R-5001",
+  "location": {
+    "name": "Remote - EMEA"
+  },
+  "absolute_url": "https://job-boards.greenhouse.io/grafanalabs/jobs/5012345001",
+  "language": "en",
+  "metadata": null,
+  "company_name": null,
+  "first_published": "{{ago:2h}}",
+  "content": "&lt;p&gt;Build the Go services behind Grafana Cloud &amp;amp; Loki.&lt;/p&gt;&lt;h3&gt;What you bring&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;5+ years of experience with Go&lt;/li&gt;&lt;li&gt;Kubernetes&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;This role is remote within EMEA.&lt;/p&gt;",
+  "departments": [
+    {
+      "id": 9001,
+      "name": "Engineering",
+      "child_ids": [],
+      "parent_id": null
+    }
+  ],
+  "offices": [
+    {
+      "id": 71,
+      "name": "EMEA Remote",
+      "location": "Remote",
+      "child_ids": [],
+      "parent_id": null
+    }
+  ]
+}
