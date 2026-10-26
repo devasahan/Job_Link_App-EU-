@@ -138,6 +138,26 @@ test("failures stay with their company; a block or a host that stopped answering
   const blockedAt = limited.calls.findIndex((c) => c.status === 429);
   assert.equal(limited.calls.length, blockedAt + 1, "nothing asked after the block");
   assert.ok(limited.report.notes.includes("Greenhouse: 1 of 3 companies not checked (stopped first)"));
+  // A 403 may be one company's board: the others go on; a second in a row is the host's
+  const refused = await runFixture({ id: "greenhouse", meta, respond: (call) => (/\/grafanalabs\/jobs$/.test(call.url) ? { status: 403, body: "Forbidden" } : null) });
+  assert.equal(refused.report.status, "incomplete");
+  assert.match(refused.report.parts["Grafana Labs"].error, /HTTP 403 \(blocked\)/);
+  assert.equal(refused.report.parts.Proton.kept, 2);
+  const twice = await runFixture({ id: "greenhouse", meta, respond: (call) => (/\/(?:grafanalabs|proton)\/jobs$/.test(call.url) ? { status: 403, body: "Forbidden" } : null) });
+  assert.equal(twice.report.errorKind, "blocked");
+  assert.ok(!twice.calls.some((c) => /\/mozilla\//.test(c.url)));
+  // The EU host failing is the company's "not found", not a failure
+  const euDown = await runFixture({
+    id: "greenhouse",
+    meta,
+    respond: (call) => {
+      if (call.host === "boards-api.eu.greenhouse.io") throw new TypeError("Failed to fetch");
+      return null;
+    },
+  });
+  assert.equal(euDown.report.status, "ok");
+  assert.deepEqual([euDown.report.parts.Proton.note, euDown.report.parts.Mozilla.note], ["not found (HTTP 404)", "not found (HTTP 404)"]);
+  assert.equal(euDown.report.parts["Grafana Labs"].kept, 4);
   // A posting gone since its board was listed: skipped, nothing failed
   const closed = await runFixture({ id: "greenhouse", meta, respond: (call) => (/\/5012345001$/.test(call.url) ? { status: 404, body: '{"status":404,"error":"Job not found"}' } : null) });
   assert.equal(closed.report.status, "ok");

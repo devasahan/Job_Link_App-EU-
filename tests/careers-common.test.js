@@ -24,13 +24,14 @@ test("atsWhere: a remote word with places opens the job to them; one European co
 
 test("atsWhere: plain Remote is for the posting's text; places without a remote word are offices, regions aren't", () => {
   assert.deepEqual(pick(where("Remote")), ["remote", null, null]);
-  assert.deepEqual(pick(where("Remote - Anywhere")), ["remote", null, ["Remote - Anywhere"]]);
+  // "Anywhere" is read as the world
+  assert.deepEqual(pick(where("Remote - Anywhere")), ["remote", null, ["Remote - Worldwide"]]);
   assert.deepEqual(pick(where("Berlin, Germany")), ["onsite", null, null]);
   assert.deepEqual(pick(where("Germany")), ["onsite", null, null]);
   assert.deepEqual(pick(where("Amsterdam, Netherlands (Hybrid)")), ["hybrid", null, null]);
   assert.deepEqual(pick(where("Remote or Hybrid - Berlin")), ["remote", null, null]);
   assert.deepEqual(pick(where("EMEA")), [null, null, ["EMEA"]]);
-  assert.deepEqual(pick(where("Anywhere")), [null, null, ["Anywhere"]]);
+  assert.deepEqual(pick(where("Anywhere in the world")), [null, null, ["Worldwide"]]);
   assert.deepEqual(pick(where("")), [null, null, null]);
 });
 
@@ -78,6 +79,7 @@ test("who can take it, living in Spain, Finland or Sweden", () => {
   assert.equal(outcome(verdict("Remote - US only", { home: "SE" })), "restricted");
   assert.equal(outcome(verdict("Remote - US only", { home: "SE", abroad: [] })), "abroadOff");
   assert.equal(outcome(verdict("Remote - DACH", { home: "SE" })), "restricted");
+  assert.equal(outcome(verdict("Remote - Anywhere", { home: "SE" })), "open: Worldwide");
   // Everywhere: an office is not remote; plain Remote needs the posting to say Europe
   for (const home of ["ES", "FI", "SE"]) {
     assert.equal(outcome(verdict("Berlin, Germany", { home })), "notRemote");

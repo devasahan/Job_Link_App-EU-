@@ -10,7 +10,7 @@ import { SourceError, parseJson } from "../http.js";
 
 // Not one of open-to.js's remote words, but how boards write it: "Home based - EMEA" (Canonical)
 const HOME_BASED_RE = /(?<![\p{L}\p{N}])home[\s-]?based(?![\p{L}\p{N}])/iu;
-// "Anywhere", "Remote - Anywhere", "Anywhere in the world": the world
+// "Anywhere", "Remote - Anywhere", "Anywhere in the world": the world (read as "Worldwide")
 const ANYWHERE_RE = /(?<![\p{L}\p{N}])anywhere(?:\s+in\s+the\s+world)?(?![\p{L}\p{N}])/giu;
 // One location field may hold several: "Berlin, Germany; Remote, Spain", "London | Remote (UK)"
 const SPLIT_RE = /\s*[;|\n]\s*/;
@@ -21,7 +21,7 @@ function saysWorkplace(text) {
   return globalThis.jbWorkplaceFromText({ location: text }, { cheap: true });
 }
 
-const readPlaces = (texts) => globalThis.jbReadPlaces(texts.map((t) => t.replace(ANYWHERE_RE, "Worldwide")));
+const readPlaces = (texts) => globalThis.jbReadPlaces(texts);
 const namesPlace = (text) => {
   const read = readPlaces([text]);
   return read.codes.length > 0 || read.outside.length > 0;
@@ -64,7 +64,14 @@ function singleCountry(read) {
  * @param {{ locations?: string[], workplace?: "remote"|"hybrid"|"onsite"|null, country?: string }} info
  */
 export function atsWhere({ locations = [], workplace = null, country = "" } = {}) {
-  const items = [...new Set(locations.flatMap((l) => String(l || "").split(SPLIT_RE)).map((t) => t.trim()).filter(Boolean))];
+  const items = [
+    ...new Set(
+      locations
+        .flatMap((l) => String(l || "").split(SPLIT_RE))
+        .map((t) => t.trim().replace(ANYWHERE_RE, "Worldwide"))
+        .filter(Boolean)
+    ),
+  ];
   const said = items.map(saysWorkplace);
   const remote = items.filter((_, i) => said[i] === "remote");
   let place = workplace || null;
@@ -99,21 +106,27 @@ export async function boardJson(ctx, url) {
 }
 
 const NO_ANSWER_IN_A_ROW = 3;
+const REFUSED_IN_A_ROW = 2;
 
 /**
- * What ends a careers source rather than one company: a stop, a block (403,
- * a lasting 429: asking the other companies would only add to it), or the
- * third company in a row with no answer at all (the host is down: each would
- * wait out its timeout). check(err) rethrows those; ok() after an answer.
+ * What ends a careers source rather than one company: a stop; a block (a
+ * lasting 429, a 503, a challenge page: asking the other companies would only
+ * add to it; a 403 may be one company's board, so the second in a row); or
+ * the third company in a row with no answer at all (the host is down: each
+ * would wait out its timeout). check(err) rethrows those; ok() after an answer.
  */
 function companyGuard() {
   let silent = 0;
+  let refused = 0;
   return {
     ok() {
       silent = 0;
+      refused = 0;
     },
     check(err) {
-      if (err?.kind === "aborted" || err?.kind === "blocked") throw err;
+      if (err?.kind === "aborted") throw err;
+      refused = err?.kind === "blocked" && err.status === 403 ? refused + 1 : 0;
+      if (err?.kind === "blocked" && (err.status !== 403 || refused >= REFUSED_IN_A_ROW)) throw err;
       silent = err?.kind === "network" || err?.kind === "timeout" ? silent + 1 : 0;
       if (silent >= NO_ANSWER_IN_A_ROW) throw err;
     },

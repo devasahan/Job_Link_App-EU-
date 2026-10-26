@@ -24,9 +24,10 @@ import { expectArray } from "../http.js";
 import { decodeEntities } from "../formats/feed.js";
 import { atsWhere, boardJson, newestFirst, runCompanies } from "./common.js";
 
-const HOSTS = ["boards-api.greenhouse.io", "boards-api.eu.greenhouse.io"];
+const MAIN = "boards-api.greenhouse.io";
+const EU = "boards-api.eu.greenhouse.io";
 // Where each host's boards are shown, for a job without its own https link
-const PAGES = { "boards-api.greenhouse.io": "job-boards.greenhouse.io", "boards-api.eu.greenhouse.io": "job-boards.eu.greenhouse.io" };
+const PAGES = { [MAIN]: "job-boards.greenhouse.io", [EU]: "job-boards.eu.greenhouse.io" };
 
 // Custom fields some boards fill in: "Workplace Type: Remote", "Remote: Yes", "Employment Type: Full-time"
 const WORKPLACE_FIELD_RE = /workplace|remote|location\s*type|work\s*(?:type|model|arrangement|style)/i;
@@ -48,7 +49,7 @@ function workplaceField(row) {
   const v = field.value.toLowerCase();
   if (/hybrid/.test(v)) return "hybrid";
   if (/remote/.test(v) || (/^(?:yes|true)$/.test(v) && /remote/i.test(field.name))) return "remote";
-  if (/on[\s-]?site|in[\s-]office|office[\s-]based/.test(v)) return "onsite";
+  if (/on[\s-]?site|office/.test(v)) return "onsite";
   return null;
 }
 
@@ -58,7 +59,7 @@ const toIso = (value) => {
 };
 
 /** One list row, or a posting from /jobs/{id} (with its content), as a job. */
-export function toJob(row, company, host = HOSTS[0]) {
+export function toJob(row, company, host = MAIN) {
   const location = String(row.location?.name || "").replace(/\s+/g, " ").trim();
   const where = atsWhere({ locations: [location], workplace: workplaceField(row) });
   const link = /^https:\/\//i.test(String(row.absolute_url || "")) ? row.absolute_url : `https://${PAGES[host]}/${encodeURIComponent(company.token)}/jobs/${row.id}`;
@@ -82,14 +83,28 @@ export function toJob(row, company, host = HOSTS[0]) {
 
 const boardUrl = (host, company, path = "") => `https://${host}/v1/boards/${encodeURIComponent(company.token)}/jobs${path}`;
 
+/**
+ * A board on the EU host, or null. Only boards kept in Greenhouse's EU region
+ * are there, so its errors leave the company not found (logged) rather than
+ * failing it, or ending the source over a host most companies never use.
+ */
+async function euBoard(ctx, company) {
+  try {
+    return await boardJson(ctx, boardUrl(EU, company));
+  } catch (err) {
+    if (err?.kind === "aborted") throw err;
+    ctx.progress(`Greenhouse: ${company.name} not on the main host, and the EU host: ${err.message}`);
+    return null;
+  }
+}
+
 export async function run(ctx) {
   await runCompanies(ctx, ctx.meta.companies || [], async (part, company) => {
-    let data = null;
-    let host = "";
-    for (const h of HOSTS) {
-      host = h;
-      data = await boardJson(ctx, boardUrl(host, company));
-      if (data) break;
+    let host = MAIN;
+    let data = await boardJson(ctx, boardUrl(host, company));
+    if (!data) {
+      host = EU;
+      data = await euBoard(ctx, company);
     }
     if (!data) return null;
     const rows = expectArray(data, "jobs", `${company.name}'s board`).filter((r) => r && r.id != null && r.title);
