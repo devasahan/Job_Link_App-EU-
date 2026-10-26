@@ -138,6 +138,11 @@ test("failures stay with their company; a block or a host that stopped answering
   const blockedAt = limited.calls.findIndex((c) => c.status === 429);
   assert.equal(limited.calls.length, blockedAt + 1, "nothing asked after the block");
   assert.ok(limited.report.notes.includes("Greenhouse: 1 of 3 companies not checked (stopped first)"));
+  // A posting gone since its board was listed: skipped, nothing failed
+  const closed = await runFixture({ id: "greenhouse", meta, respond: (call) => (/\/5012345001$/.test(call.url) ? { status: 404, body: '{"status":404,"error":"Job not found"}' } : null) });
+  assert.equal(closed.report.status, "ok");
+  assert.ok(!closed.jobs.some((j) => j.title === "Senior Backend Engineer"));
+  assert.equal(closed.report.parts["Grafana Labs"].kept, 3);
   // No answer from three companies in a row: the host is down
   const many = { ...meta, companies: GREENHOUSE_BOARDS.slice(0, 6) };
   const down = await runFixture({

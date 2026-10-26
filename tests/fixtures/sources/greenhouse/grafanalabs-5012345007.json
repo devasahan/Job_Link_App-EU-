@@ -1,0 +1,33 @@
+{
+  "id": 5012345007,
+  "internal_job_id": 1012345007,
+  "title": "Staff Engineer, Platform",
+  "updated_at": "{{ago:5d}}",
+  "requisition_id": "R-5007",
+  "location": {
+    "name": "Remote - EMEA"
+  },
+  "absolute_url": "https://job-boards.greenhouse.io/grafanalabs/jobs/5012345007",
+  "language": "en",
+  "metadata": null,
+  "company_name": null,
+  "first_published": "{{ago:5d}}",
+  "content": "&lt;p&gt;Rust services for Grafana Mimir.&lt;/p&gt;&lt;p&gt;This role is remote within EMEA.&lt;/p&gt;",
+  "departments": [
+    {
+      "id": 9001,
+      "name": "Engineering",
+      "child_ids": [],
+      "parent_id": null
+    }
+  ],
+  "offices": [
+    {
+      "id": 71,
+      "name": "EMEA Remote",
+      "location": "Remote",
+      "child_ids": [],
+      "parent_id": null
+    }
+  ]
+}
